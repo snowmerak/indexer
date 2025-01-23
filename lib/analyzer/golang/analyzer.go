@@ -64,6 +64,8 @@ func (a *Analyzer) Walk(path string, recursive bool, callback func(codeBlock, fi
 			ast.Inspect(f, func(node ast.Node) bool {
 				use := false
 				switch node := node.(type) {
+				case *ast.GoStmt:
+					use = true
 				case *ast.FuncDecl:
 					use = true
 				case *ast.GenDecl:
