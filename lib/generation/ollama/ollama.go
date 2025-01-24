@@ -18,12 +18,12 @@ const (
 
 const (
 	ModelDefault          = ModelQwen2o5Coder1o5B
-	ModelQwen2o5Coder0o5B = "qwen2.5-coder0.5b"
-	ModelQwen2o5Coder1o5B = "qwen2.5-coder1.5b"
-	ModelQwen2o5Coder3B   = "qwen2.5-coder3b"
-	ModelQwen2o5Coder7B   = "qwen2.5-coder7b"
-	ModelQwen2o5Coder14B  = "qwen2.5-coder14b"
-	ModelQwen2o5Coder32B  = "qwen2.5-coder32b"
+	ModelQwen2o5Coder0o5B = "qwen2.5-coder:0.5b"
+	ModelQwen2o5Coder1o5B = "qwen2.5-coder:1.5b"
+	ModelQwen2o5Coder3B   = "qwen2.5-coder:3b"
+	ModelQwen2o5Coder7B   = "qwen2.5-coder:7b"
+	ModelQwen2o5Coder14B  = "qwen2.5-coder:14b"
+	ModelQwen2o5Coder32B  = "qwen2.5-coder:32b"
 )
 
 type ClientConfig struct {
