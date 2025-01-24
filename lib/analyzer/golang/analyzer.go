@@ -61,6 +61,7 @@ func (a *Analyzer) Walk(path string, recursive bool, callback func(codeBlock, fi
 			}
 			buf := bytes.NewBuffer(nil)
 
+			superErr := error(nil)
 			ast.Inspect(f, func(node ast.Node) bool {
 				use := false
 				switch node := node.(type) {
@@ -88,12 +89,16 @@ func (a *Analyzer) Walk(path string, recursive bool, callback func(codeBlock, fi
 						return false
 					}
 					if err := callback(buf.String(), sourceFile, fileSet.Position(node.Pos()).Line); err != nil {
+						superErr = fmt.Errorf("failed to callback: %w", err)
 						return false
 					}
 				}
 
 				return true
 			})
+			if superErr != nil {
+				return superErr
+			}
 		}
 	}
 
