@@ -3,7 +3,6 @@ package qdrant
 import (
 	"context"
 	"fmt"
-	"sync/atomic"
 
 	"github.com/qdrant/go-client/qdrant"
 
@@ -45,7 +44,6 @@ func (c *Config) WithVolatility() *Config {
 type Vector struct {
 	client *qdrant.Client
 	config *Config
-	id     atomic.Int64
 }
 
 func New(ctx context.Context, cfg *Config) (*Vector, error) {
@@ -101,10 +99,6 @@ func New(ctx context.Context, cfg *Config) (*Vector, error) {
 		client: client,
 		config: cfg,
 	}, nil
-}
-
-func (v *Vector) NextId() int {
-	return int(v.id.Add(1))
 }
 
 func (v *Vector) Store(ctx context.Context, id int, vector []float64) error {
