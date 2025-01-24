@@ -5,11 +5,14 @@ services:
     ports:
       - "6333:6333"
       - "6334:6334"
-  clickhouse:
-    image: docker.io/clickhouse/clickhouse-server:latest
+  postgres:
+    image: docker.io/postgres:17
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
     ports:
-      - "8123:8123"
-      - "9000:9000"
+      - "5432:5432"
   meilisearch:
     image: docker.io/getmeili/meilisearch:v1.12
     environment:
