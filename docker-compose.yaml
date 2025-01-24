@@ -1,0 +1,18 @@
+version: "3.8"
+services:
+  qdrant:
+    image: docker.io/qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+      - "6334:6334"
+  clickhouse:
+    image: docker.io/clickhouse/clickhouse-server:latest
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+  meilisearch:
+    image: docker.io/getmeili/meilisearch:v1.12
+    environment:
+      - MEILI_MASTER_KEY=tFWSre9Ix9Ltq7nXV87c9O5UP
+    ports:
+      - "7700:7700"
