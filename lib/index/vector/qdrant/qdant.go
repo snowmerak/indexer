@@ -6,6 +6,7 @@ import (
 
 	"github.com/qdrant/go-client/qdrant"
 
+	"github.com/snowmerak/indexer/lib/index/vector"
 	"github.com/snowmerak/indexer/pkg/box"
 )
 
@@ -40,6 +41,8 @@ func (c *Config) WithVolatility() *Config {
 	c.volatility = true
 	return c
 }
+
+var _ vector.Vector = (*Vector)(nil)
 
 type Vector struct {
 	client *qdrant.Client
@@ -101,9 +104,9 @@ func New(ctx context.Context, cfg *Config) (*Vector, error) {
 	}, nil
 }
 
-func (v *Vector) Store(ctx context.Context, id int, vector []float64) error {
-	nv := make([]float32, len(vector))
-	for i, v := range vector {
+func (v *Vector) Store(ctx context.Context, id int, payload *vector.Payload) error {
+	nv := make([]float32, len(payload.Vector))
+	for i, v := range payload.Vector {
 		nv[i] = float32(v)
 	}
 
@@ -114,6 +117,9 @@ func (v *Vector) Store(ctx context.Context, id int, vector []float64) error {
 			{
 				Id:      qdrant.NewIDNum(uint64(id)),
 				Vectors: qdrant.NewVectors(nv...),
+				Payload: map[string]*qdrant.Value{
+					vector.PayloadRelatedId: qdrant.NewValueInt(int64(payload.RelatedId)),
+				},
 			},
 		},
 	}); err != nil {
@@ -123,11 +129,12 @@ func (v *Vector) Store(ctx context.Context, id int, vector []float64) error {
 	return nil
 }
 
-func (v *Vector) Get(ctx context.Context, id int) ([]float64, error) {
+func (v *Vector) Get(ctx context.Context, id int) (*vector.Payload, error) {
 	pt, err := v.client.Get(ctx, &qdrant.GetPoints{
 		CollectionName: v.config.name,
 		Ids:            []*qdrant.PointId{qdrant.NewIDNum(uint64(id))},
 		WithVectors:    qdrant.NewWithVectors(true),
+		WithPayload:    qdrant.NewWithPayload(true),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to get: %w", err)
@@ -137,20 +144,31 @@ func (v *Vector) Get(ctx context.Context, id int) ([]float64, error) {
 		return nil, fmt.Errorf("point not found")
 	}
 
-	fpt := pt[0]
-	vector := fpt.GetVectors().GetVector().Data
-	nv := make([]float64, len(vector))
+	p := &vector.Payload{
+		Id: id,
+	}
 
-	for i, v := range vector {
+	fpt := pt[0]
+	vt := fpt.GetVectors().GetVector().Data
+	nv := make([]float64, len(vt))
+
+	p.Vector = nv
+
+	for i, v := range vt {
 		nv[i] = float64(v)
 	}
 
-	return nv, nil
+	ri := fpt.GetPayload()[vector.PayloadRelatedId]
+	if ri != nil {
+		p.RelatedId = int(ri.GetIntegerValue())
+	}
+
+	return p, nil
 }
 
-func (v *Vector) Search(ctx context.Context, vector []float64, limit int) ([]int, error) {
-	nv := make([]float32, len(vector))
-	for i, v := range vector {
+func (v *Vector) Search(ctx context.Context, vt []float64, limit int) ([]*vector.Payload, error) {
+	nv := make([]float32, len(vt))
+	for i, v := range vt {
 		nv[i] = float32(v)
 	}
 
@@ -158,17 +176,27 @@ func (v *Vector) Search(ctx context.Context, vector []float64, limit int) ([]int
 		CollectionName: v.config.name,
 		Query:          qdrant.NewQuery(nv...),
 		Limit:          box.Wrap(uint64(limit)),
+		WithPayload:    qdrant.NewWithPayload(true),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to query: %w", err)
 	}
 
-	ids := make([]int, len(resp))
+	ps := make([]*vector.Payload, len(resp))
 	for i, pt := range resp {
-		ids[i] = int(pt.GetId().GetNum())
+		ri := pt.GetPayload()[vector.PayloadRelatedId]
+		p := &vector.Payload{
+			Id: int(pt.GetId().GetNum()),
+		}
+
+		if ri != nil {
+			p.RelatedId = int(ri.GetIntegerValue())
+		}
+
+		ps[i] = p
 	}
 
-	return ids, nil
+	return ps, nil
 }
 
 func (v *Vector) Delete(ctx context.Context, id int) error {
