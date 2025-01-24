@@ -8,7 +8,6 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/nao1215/markdown"
 	"github.com/ollama/ollama/api"
 
 	"github.com/snowmerak/indexer/lib/generation"
