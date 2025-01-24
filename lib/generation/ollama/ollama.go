@@ -17,13 +17,25 @@ const (
 )
 
 const (
-	ModelDefault          = ModelQwen2o5Coder1o5B
-	ModelQwen2o5Coder0o5B = "qwen2.5-coder:0.5b"
-	ModelQwen2o5Coder1o5B = "qwen2.5-coder:1.5b"
-	ModelQwen2o5Coder3B   = "qwen2.5-coder:3b"
-	ModelQwen2o5Coder7B   = "qwen2.5-coder:7b"
-	ModelQwen2o5Coder14B  = "qwen2.5-coder:14b"
-	ModelQwen2o5Coder32B  = "qwen2.5-coder:32b"
+	GenerationModelDefault          = GenerationModelQwen2o5Coder1o5B
+	GenerationModelQwen2o5Coder0o5B = "qwen2.5-coder:0.5b"
+	GenerationModelQwen2o5Coder1o5B = "qwen2.5-coder:1.5b"
+	GenerationModelQwen2o5Coder3B   = "qwen2.5-coder:3b"
+	GenerationModelQwen2o5Coder7B   = "qwen2.5-coder:7b"
+	GenerationModelQwen2o5Coder14B  = "qwen2.5-coder:14b"
+	GenerationModelQwen2o5Coder32B  = "qwen2.5-coder:32b"
+	GenerationModelDeepseekR11o5B   = "deepseek-r1:1.5b"
+	GenerationModelCodeGemma2B      = "codegemma:2b"
+)
+
+const (
+	EmbeddingModelBgeM3o5B        = "bge-m3"
+	EmbeddingModelMxbaiEmbedLarge = "mxbai-embed-large"
+)
+
+const (
+	EmbeddingModelBgeM3o5BDim        = 768
+	EmbeddingModelMxbaiEmbedLargeDim = 1024
 )
 
 type ClientConfig struct {
@@ -97,4 +109,41 @@ func (c *TextClient) Generate(ctx context.Context, prompt string) (string, error
 	}
 
 	return builder.String(), nil
+}
+
+var _ generation.Embeddings = &EmbeddingsClient{}
+
+type EmbeddingsClient struct {
+	client *api.Client
+	model  string
+}
+
+func NewEmbeddingsClient(_ context.Context, cfg *ClientConfig, model string) (*EmbeddingsClient, error) {
+	if cfg.url == nil {
+		p, err := url.Parse(DefaultURL)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse default url: %w", err)
+		}
+
+		cfg.url = p
+	}
+
+	client := api.NewClient(cfg.url, cfg.httpClient)
+
+	return &EmbeddingsClient{
+		client: client,
+		model:  model,
+	}, nil
+}
+
+func (c *EmbeddingsClient) Embed(ctx context.Context, prompt string) ([]float64, error) {
+	embeddings, err := c.client.Embeddings(ctx, &api.EmbeddingRequest{
+		Model:  c.model,
+		Prompt: prompt,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to embeddings: %w", err)
+	}
+
+	return embeddings.Embedding, nil
 }
