@@ -1,7 +1,6 @@
 package ollama
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"net/http"
