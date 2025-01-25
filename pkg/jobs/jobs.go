@@ -10,34 +10,60 @@ import (
 )
 
 type Jobs struct {
-	pool *ants.Pool
+	pool  *ants.Pool
+	errCh chan error
 }
 
-func New(ctx context.Context, size int) (*Jobs, error) {
-	pool, err := ants.NewPool(size, ants.WithExpiryDuration(3*time.Minute), ants.WithNonblocking(false), ants.WithPanicHandler(func(i interface{}) {
+func New(ctx context.Context, concurrentWorkerSize int) (*Jobs, error) {
+	pool, err := ants.NewPool(concurrentWorkerSize, ants.WithExpiryDuration(3*time.Minute), ants.WithNonblocking(false), ants.WithPanicHandler(func(i interface{}) {
 		log.Error().Any("panic", i).Msg("panic in job")
 	}))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create ants pool: %w", err)
 	}
 
+	errCh := make(chan error, 1024)
+
 	context.AfterFunc(ctx, func() {
 		pool.Release()
+		close(errCh)
 	})
 
 	return &Jobs{
-		pool: pool,
+		pool:  pool,
+		errCh: errCh,
 	}, nil
 }
 
 func (j *Jobs) Submit(job func() error) <-chan error {
-	ch := make(chan error, 1)
-
 	if err := j.pool.Submit(func() {
-		ch <- job()
+		j.errCh <- job()
 	}); err != nil {
-		close(ch)
+		j.errCh <- err
 	}
 
-	return ch
+	return j.errCh
+}
+
+func (j *Jobs) MarkEnd() {
+	close(j.errCh)
+}
+
+func (j *Jobs) Close() error {
+	joinedErr := error(nil)
+	for err := range j.errCh {
+		if err != nil {
+			if joinedErr == nil {
+				joinedErr = err
+			} else {
+				joinedErr = fmt.Errorf("%w; %w", joinedErr, err)
+			}
+		}
+	}
+
+	return joinedErr
+}
+
+func (j *Jobs) Err() <-chan error {
+	return j.errCh
 }
