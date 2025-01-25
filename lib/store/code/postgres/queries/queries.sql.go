@@ -12,10 +12,12 @@ import (
 )
 
 const createData = `-- name: CreateData :one
-INSERT INTO data (code_block, file_path, line, description) VALUES ($1, $2, $3, $4) RETURNING id, code_block, file_path, line, description
+INSERT INTO data (project, id, code_block, file_path, line, description) VALUES ($1, $2, $3, $4, $5, $6) RETURNING project, id, code_block, file_path, line, description
 `
 
 type CreateDataParams struct {
+	Project     string
+	ID          int64
 	CodeBlock   pgtype.Text
 	FilePath    pgtype.Text
 	Line        pgtype.Int4
@@ -24,6 +26,8 @@ type CreateDataParams struct {
 
 func (q *Queries) CreateData(ctx context.Context, arg CreateDataParams) (Datum, error) {
 	row := q.db.QueryRow(ctx, createData,
+		arg.Project,
+		arg.ID,
 		arg.CodeBlock,
 		arg.FilePath,
 		arg.Line,
@@ -31,6 +35,7 @@ func (q *Queries) CreateData(ctx context.Context, arg CreateDataParams) (Datum, 
 	)
 	var i Datum
 	err := row.Scan(
+		&i.Project,
 		&i.ID,
 		&i.CodeBlock,
 		&i.FilePath,
@@ -41,13 +46,19 @@ func (q *Queries) CreateData(ctx context.Context, arg CreateDataParams) (Datum, 
 }
 
 const deleteData = `-- name: DeleteData :one
-DELETE FROM data WHERE id = $1 RETURNING id, code_block, file_path, line, description
+DELETE FROM data WHERE project = $1 AND id = $2 RETURNING project, id, code_block, file_path, line, description
 `
 
-func (q *Queries) DeleteData(ctx context.Context, id int32) (Datum, error) {
-	row := q.db.QueryRow(ctx, deleteData, id)
+type DeleteDataParams struct {
+	Project string
+	ID      int64
+}
+
+func (q *Queries) DeleteData(ctx context.Context, arg DeleteDataParams) (Datum, error) {
+	row := q.db.QueryRow(ctx, deleteData, arg.Project, arg.ID)
 	var i Datum
 	err := row.Scan(
+		&i.Project,
 		&i.ID,
 		&i.CodeBlock,
 		&i.FilePath,
@@ -58,11 +69,16 @@ func (q *Queries) DeleteData(ctx context.Context, id int32) (Datum, error) {
 }
 
 const deleteDataList = `-- name: DeleteDataList :many
-DELETE FROM data WHERE id = ANY($1::int[]) RETURNING id, code_block, file_path, line, description
+DELETE FROM data WHERE project = $1 AND id = ANY($2::int[]) RETURNING project, id, code_block, file_path, line, description
 `
 
-func (q *Queries) DeleteDataList(ctx context.Context, dollar_1 []int32) ([]Datum, error) {
-	rows, err := q.db.Query(ctx, deleteDataList, dollar_1)
+type DeleteDataListParams struct {
+	Project string
+	Column2 []int32
+}
+
+func (q *Queries) DeleteDataList(ctx context.Context, arg DeleteDataListParams) ([]Datum, error) {
+	rows, err := q.db.Query(ctx, deleteDataList, arg.Project, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -71,6 +87,38 @@ func (q *Queries) DeleteDataList(ctx context.Context, dollar_1 []int32) ([]Datum
 	for rows.Next() {
 		var i Datum
 		if err := rows.Scan(
+			&i.Project,
+			&i.ID,
+			&i.CodeBlock,
+			&i.FilePath,
+			&i.Line,
+			&i.Description,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const deleteProjectData = `-- name: DeleteProjectData :many
+DELETE FROM data WHERE project = $1 RETURNING project, id, code_block, file_path, line, description
+`
+
+func (q *Queries) DeleteProjectData(ctx context.Context, project string) ([]Datum, error) {
+	rows, err := q.db.Query(ctx, deleteProjectData, project)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Datum
+	for rows.Next() {
+		var i Datum
+		if err := rows.Scan(
+			&i.Project,
 			&i.ID,
 			&i.CodeBlock,
 			&i.FilePath,
@@ -88,13 +136,19 @@ func (q *Queries) DeleteDataList(ctx context.Context, dollar_1 []int32) ([]Datum
 }
 
 const getData = `-- name: GetData :one
-SELECT id, code_block, file_path, line, description FROM data WHERE id = $1
+SELECT project, id, code_block, file_path, line, description FROM data WHERE project = $1 AND id = $2
 `
 
-func (q *Queries) GetData(ctx context.Context, id int32) (Datum, error) {
-	row := q.db.QueryRow(ctx, getData, id)
+type GetDataParams struct {
+	Project string
+	ID      int64
+}
+
+func (q *Queries) GetData(ctx context.Context, arg GetDataParams) (Datum, error) {
+	row := q.db.QueryRow(ctx, getData, arg.Project, arg.ID)
 	var i Datum
 	err := row.Scan(
+		&i.Project,
 		&i.ID,
 		&i.CodeBlock,
 		&i.FilePath,
@@ -105,11 +159,16 @@ func (q *Queries) GetData(ctx context.Context, id int32) (Datum, error) {
 }
 
 const getDataList = `-- name: GetDataList :many
-SELECT id, code_block, file_path, line, description FROM data WHERE id = ANY($1::int[])
+SELECT project, id, code_block, file_path, line, description FROM data WHERE project = $1 AND id = ANY($2::int[])
 `
 
-func (q *Queries) GetDataList(ctx context.Context, dollar_1 []int32) ([]Datum, error) {
-	rows, err := q.db.Query(ctx, getDataList, dollar_1)
+type GetDataListParams struct {
+	Project string
+	Column2 []int32
+}
+
+func (q *Queries) GetDataList(ctx context.Context, arg GetDataListParams) ([]Datum, error) {
+	rows, err := q.db.Query(ctx, getDataList, arg.Project, arg.Column2)
 	if err != nil {
 		return nil, err
 	}
@@ -118,6 +177,7 @@ func (q *Queries) GetDataList(ctx context.Context, dollar_1 []int32) ([]Datum, e
 	for rows.Next() {
 		var i Datum
 		if err := rows.Scan(
+			&i.Project,
 			&i.ID,
 			&i.CodeBlock,
 			&i.FilePath,
@@ -135,11 +195,12 @@ func (q *Queries) GetDataList(ctx context.Context, dollar_1 []int32) ([]Datum, e
 }
 
 const updateData = `-- name: UpdateData :one
-UPDATE data SET code_block = $2, file_path = $3, line = $4, description = $5 WHERE id = $1 RETURNING id, code_block, file_path, line, description
+UPDATE data SET code_block = $3, file_path = $4, line = $5, description = $6 WHERE project = $1 AND id = $2 RETURNING project, id, code_block, file_path, line, description
 `
 
 type UpdateDataParams struct {
-	ID          int32
+	Project     string
+	ID          int64
 	CodeBlock   pgtype.Text
 	FilePath    pgtype.Text
 	Line        pgtype.Int4
@@ -148,6 +209,7 @@ type UpdateDataParams struct {
 
 func (q *Queries) UpdateData(ctx context.Context, arg UpdateDataParams) (Datum, error) {
 	row := q.db.QueryRow(ctx, updateData,
+		arg.Project,
 		arg.ID,
 		arg.CodeBlock,
 		arg.FilePath,
@@ -156,6 +218,7 @@ func (q *Queries) UpdateData(ctx context.Context, arg UpdateDataParams) (Datum, 
 	)
 	var i Datum
 	err := row.Scan(
+		&i.Project,
 		&i.ID,
 		&i.CodeBlock,
 		&i.FilePath,
