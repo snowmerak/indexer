@@ -177,10 +177,10 @@ func (idx *Indexer) Search(ctx context.Context, query string, count int) ([]*cod
 
 	uniqueIdxSet := make(map[int]struct{})
 	uniqueIdxOrder := make([]int, 0)
-	for _, d := range data {
+	for i, d := range data {
 		if _, ok := uniqueIdxSet[d.Id]; !ok {
 			uniqueIdxSet[d.Id] = struct{}{}
-			uniqueIdxOrder = append(uniqueIdxOrder, d.Id)
+			uniqueIdxOrder = append(uniqueIdxOrder, i)
 		}
 	}
 
