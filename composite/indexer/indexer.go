@@ -48,7 +48,7 @@ func (idx *Indexer) Initialize(ctx context.Context) error {
 		}
 	}()
 
-	if err := idx.vectorIndex.Create(ctx); err != nil {
+	if err := idx.vectorIndex.Create(ctx, idx.embeddingsGeneration.Size()); err != nil {
 		rollback = true
 		return fmt.Errorf("failed to create vectorIndex: %w", err)
 	}
