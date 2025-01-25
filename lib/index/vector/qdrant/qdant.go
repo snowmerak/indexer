@@ -73,9 +73,13 @@ func New(ctx context.Context, cfg *Config) (*Vector, error) {
 	}, nil
 }
 
-func (v *Vector) Create(ctx context.Context) error {
+func (v *Vector) Create(ctx context.Context, vectorSize uint64) error {
 	if err := v.client.CreateCollection(ctx, &qdrant.CreateCollection{
 		CollectionName: v.config.name,
+		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
+			Size:     vectorSize,
+			Distance: qdrant.Distance_Cosine,
+		}),
 	}); err != nil {
 		return fmt.Errorf("create collection: %w", err)
 	}
