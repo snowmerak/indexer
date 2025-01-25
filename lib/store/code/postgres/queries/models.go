@@ -9,7 +9,7 @@ import (
 )
 
 type Datum struct {
-	Project     strin
+	Project     string
 	ID          int64
 	CodeBlock   pgtype.Text
 	FilePath    pgtype.Text
