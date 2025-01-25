@@ -4,13 +4,14 @@ go 1.24rc1
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.1
-	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.7.2
 	github.com/nao1215/markdown v0.7.0
 	github.com/ollama/ollama v0.5.7
+	github.com/panjf2000/ants/v2 v2.11.0
 	github.com/qdrant/go-client v1.13.0
 	github.com/rs/zerolog v1.33.0
 	golang.org/x/exp v0.0.0-20231110203233-9a3e6036ecaa
+	golang.org/x/sync v0.10.0
 )
 
 require (
@@ -18,6 +19,7 @@ require (
 	github.com/andybalholm/brotli v1.1.1 // indirect
 	github.com/go-faster/city v1.0.1 // indirect
 	github.com/go-faster/errors v0.7.1 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
@@ -37,7 +39,6 @@ require (
 	go.opentelemetry.io/otel/trace v1.26.0 // indirect
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/net v0.34.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240827150818-7e3bb234dfed // indirect
