@@ -37,11 +37,6 @@ func (c *Config) WithTLS() *Config {
 	return c
 }
 
-func (c *Config) WithVolatility() *Config {
-	c.volatility = true
-	return c
-}
-
 var _ vector.Vector = (*Vector)(nil)
 
 type Vector struct {
@@ -72,36 +67,20 @@ func New(ctx context.Context, cfg *Config) (*Vector, error) {
 		client.Close()
 	})
 
-	if err := client.CreateCollection(ctx, &qdrant.CreateCollection{
-		CollectionName: cfg.name,
-	}); err != nil {
-		if cfg.volatility {
-			return nil, fmt.Errorf("failed to create collection: %w", err)
-		}
-	}
-
-	if cfg.volatility {
-		context.AfterFunc(ctx, func() {
-			count := 0
-		loop:
-			for {
-				if err := client.DeleteCollection(context.Background(), cfg.name); err != nil {
-					count++
-					if count > 3 {
-						break loop
-					}
-					continue loop
-				}
-
-				break loop
-			}
-		})
-	}
-
 	return &Vector{
 		client: client,
 		config: cfg,
 	}, nil
+}
+
+func (v *Vector) Create(ctx context.Context) error {
+	if err := v.client.CreateCollection(ctx, &qdrant.CreateCollection{
+		CollectionName: v.config.name,
+	}); err != nil {
+		return fmt.Errorf("create collection: %w", err)
+	}
+
+	return nil
 }
 
 func (v *Vector) Store(ctx context.Context, id int, payload *vector.Payload) error {
