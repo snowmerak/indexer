@@ -2,13 +2,12 @@ package prompt
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 
 	"github.com/nao1215/markdown"
 )
 
-func CodeAnalysis(code string) (string, error) {
+func CodeAnalysis(code string) string {
 	builder := new(bytes.Buffer)
 	md := markdown.NewMarkdown(builder).
 		H1("Code Analysis").
@@ -18,11 +17,9 @@ func CodeAnalysis(code string) (string, error) {
 		CodeBlocks("go", code).
 		H2("Requirement").
 		PlainText("Write a description of the code block above. The description must be written in '## description' block. You must not make other contents except for the description.")
-	if err := md.Build(); err != nil {
-		return "", fmt.Errorf("failed to build markdown: %w", err)
-	}
+	_ = md.Build()
 
-	return builder.String(), nil
+	return builder.String()
 }
 
 func UnwrapCodeAnalysis(response string) string {
