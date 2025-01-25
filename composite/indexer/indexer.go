@@ -11,11 +11,13 @@ import (
 	"github.com/snowmerak/indexer/lib/generation"
 	"github.com/snowmerak/indexer/lib/index/vector"
 	"github.com/snowmerak/indexer/lib/store/code"
+	"github.com/snowmerak/indexer/pkg/jobs"
 	"github.com/snowmerak/indexer/pkg/prompt"
 	"github.com/snowmerak/indexer/pkg/stepper"
 )
 
 type Indexer struct {
+	jobs                 *jobs.Jobs
 	analyzer             analyzer.Analyzer
 	embeddingsGeneration generation.Embeddings
 	chatGeneration       generation.Text
@@ -23,8 +25,9 @@ type Indexer struct {
 	vectorIndex          vector.Vector
 }
 
-func New(analyzer analyzer.Analyzer, embeddingsGeneration generation.Embeddings, chatGeneration generation.Text, codeStore code.Store, vectorIndex vector.Vector) *Indexer {
+func New(jobs *jobs.Jobs, analyzer analyzer.Analyzer, embeddingsGeneration generation.Embeddings, chatGeneration generation.Text, codeStore code.Store, vectorIndex vector.Vector) *Indexer {
 	return &Indexer{
+		jobs:                 jobs,
 		analyzer:             analyzer,
 		embeddingsGeneration: embeddingsGeneration,
 		chatGeneration:       chatGeneration,
@@ -86,68 +89,78 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 	vis := stepper.Int[int]()
 
 	if err := idx.analyzer.Walk(path, true, func(codeBlock, filePath string, line int) error {
-		idxNum := is.Next()
+		_ = idx.jobs.Submit(func() error {
+			idxNum := is.Next()
 
-		explanation, err := idx.chatGeneration.Generate(ctx, prompt.CodeAnalysis(codeBlock))
-		if err != nil {
-			return fmt.Errorf("failed to generate explanation: %w", err)
-		}
-
-		eg := errgroup.Group{}
-
-		eg.Go(func() error {
-			if err := idx.codeStore.Save(ctx, idxNum, codeBlock, filePath, line, explanation); err != nil {
-				return fmt.Errorf("failed to save code: %w", err)
-			}
-
-			return nil
-		})
-
-		eg.Go(func() error {
-			vectorIdxNum := vis.Next()
-
-			embedding, err := idx.embeddingsGeneration.Embed(ctx, explanation)
+			explanation, err := idx.chatGeneration.Generate(ctx, prompt.CodeAnalysis(codeBlock))
 			if err != nil {
-				return fmt.Errorf("failed to embed explanation: %w", err)
+				return fmt.Errorf("failed to generate explanation: %w", err)
 			}
 
-			if err := idx.vectorIndex.Store(ctx, vectorIdxNum, &vector.Payload{
-				Id:        vectorIdxNum,
-				Vector:    embedding,
-				RelatedId: idxNum,
-			}); err != nil {
-				return fmt.Errorf("failed to store vector: %w", err)
+			eg := errgroup.Group{}
+
+			eg.Go(func() error {
+				if err := idx.codeStore.Save(ctx, idxNum, codeBlock, filePath, line, explanation); err != nil {
+					return fmt.Errorf("failed to save code: %w", err)
+				}
+
+				return nil
+			})
+
+			eg.Go(func() error {
+				vectorIdxNum := vis.Next()
+
+				embedding, err := idx.embeddingsGeneration.Embed(ctx, explanation)
+				if err != nil {
+					return fmt.Errorf("failed to embed explanation: %w", err)
+				}
+
+				if err := idx.vectorIndex.Store(ctx, vectorIdxNum, &vector.Payload{
+					Id:        vectorIdxNum,
+					Vector:    embedding,
+					RelatedId: idxNum,
+				}); err != nil {
+					return fmt.Errorf("failed to store vector: %w", err)
+				}
+
+				return nil
+			})
+
+			eg.Go(func() error {
+				vectorIdxNum := vis.Next()
+
+				embedding, err := idx.embeddingsGeneration.Embed(ctx, codeBlock)
+				if err != nil {
+					return fmt.Errorf("failed to embed code: %w", err)
+				}
+
+				if err := idx.vectorIndex.Store(ctx, vectorIdxNum, &vector.Payload{
+					Id:        vectorIdxNum,
+					Vector:    embedding,
+					RelatedId: idxNum,
+				}); err != nil {
+					return fmt.Errorf("failed to store vector: %w", err)
+				}
+
+				return nil
+			})
+
+			if err := eg.Wait(); err != nil {
+				return fmt.Errorf("failed to index: %w", err)
 			}
 
 			return nil
 		})
-
-		eg.Go(func() error {
-			vectorIdxNum := vis.Next()
-
-			embedding, err := idx.embeddingsGeneration.Embed(ctx, codeBlock)
-			if err != nil {
-				return fmt.Errorf("failed to embed code: %w", err)
-			}
-
-			if err := idx.vectorIndex.Store(ctx, vectorIdxNum, &vector.Payload{
-				Id:        vectorIdxNum,
-				Vector:    embedding,
-				RelatedId: idxNum,
-			}); err != nil {
-				return fmt.Errorf("failed to store vector: %w", err)
-			}
-
-			return nil
-		})
-
-		if err := eg.Wait(); err != nil {
-			return fmt.Errorf("failed to index: %w", err)
-		}
 
 		return nil
 	}); err != nil {
 		return fmt.Errorf("failed to walk: %w", err)
+	}
+
+	idx.jobs.MarkEnd()
+
+	if err := idx.jobs.Close(); err != nil {
+		return fmt.Errorf("failed to close jobs: %w", err)
 	}
 
 	return nil
