@@ -58,12 +58,15 @@ func main() {
 	//	panic(err)
 	//}
 
-	result, err := idxer.Search(ctx, "where is the query of postgres?", 10)
+	result, err := idxer.Search(ctx, "code explanation prompt", 10)
 	if err != nil {
 		panic(err)
 	}
 
 	for _, r := range result {
-		fmt.Println(r.FilePath, r.Line, r.CodeBlock)
+		fmt.Println(r.FilePath, r.Line)
+		fmt.Printf("-----------\nCode Block: %s\n-----------\n", r.CodeBlock)
+		fmt.Printf("-----------\nExplanation: %s\n-----------\n", r.Description)
+		fmt.Printf("==========\n")
 	}
 }
