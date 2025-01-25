@@ -19,7 +19,7 @@ func CodeAnalysis(code string) string {
 		PlainText("Write a explanation of the code block above. The explanation must be written in '## explanation' block. You must not make other contents except for the explanation.")
 	_ = md.Build()
 
-	return builder.String()
+	return UnwrapCodeAnalysis(md.String())
 }
 
 func UnwrapCodeAnalysis(response string) string {
