@@ -147,3 +147,14 @@ func (c *EmbeddingsClient) Embed(ctx context.Context, prompt string) ([]float64,
 
 	return embeddings.Embedding, nil
 }
+
+func (c *EmbeddingsClient) Size() uint64 {
+	switch c.model {
+	case EmbeddingModelBgeM3o5B:
+		return EmbeddingModelBgeM3o5BDim
+	case EmbeddingModelMxbaiEmbedLarge:
+		return EmbeddingModelMxbaiEmbedLargeDim
+	default:
+		return 0
+	}
+}
