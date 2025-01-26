@@ -34,7 +34,7 @@ const (
 )
 
 const (
-	EmbeddingModelBgeM3o5BDim        = 768
+	EmbeddingModelBgeM3o5BDim        = 1024
 	EmbeddingModelMxbaiEmbedLargeDim = 1024
 )
 
