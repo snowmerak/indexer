@@ -157,8 +157,6 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 		return fmt.Errorf("failed to walk: %w", err)
 	}
 
-	idx.jobs.MarkEnd()
-
 	if err := idx.jobs.Close(); err != nil {
 		return fmt.Errorf("failed to close jobs: %w", err)
 	}
