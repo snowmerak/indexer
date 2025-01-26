@@ -25,6 +25,11 @@ func New(ctx context.Context, concurrentWorkerSize int) (*Jobs, error) {
 	errCh := make(chan error, 1024)
 
 	context.AfterFunc(ctx, func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Error().Any("panic", r).Msg("panic in job closing")
+			}
+		}()
 		pool.Release()
 		close(errCh)
 	})
