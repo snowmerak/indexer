@@ -92,7 +92,7 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 		_ = idx.jobs.Submit(func() error {
 			idxNum := is.Next()
 
-			explanation, err := idx.chatGeneration.Generate(ctx, prompt.CodeAnalysis(codeBlock))
+			explanation, err := idx.chatGeneration.Generate(ctx, prompt.CodeAnalysis("go", codeBlock))
 			if err != nil {
 				return fmt.Errorf("failed to generate explanation: %w", err)
 			}
