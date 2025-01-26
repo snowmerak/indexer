@@ -17,10 +17,6 @@ import (
 )
 
 func main() {
-	// indexer init
-	// indexer index <path>
-	// indexer search <query> <limit>
-	// indexer cleanup
 	command := os.Args[1]
 	firstArg := ""
 	if len(os.Args) > 2 {
