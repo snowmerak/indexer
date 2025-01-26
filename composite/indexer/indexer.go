@@ -3,6 +3,7 @@ package indexer
 import (
 	"context"
 	"fmt"
+	"path/filepath"
 
 	"github.com/rs/zerolog/log"
 	"golang.org/x/sync/errgroup"
@@ -11,6 +12,7 @@ import (
 	"github.com/snowmerak/indexer/lib/generation"
 	"github.com/snowmerak/indexer/lib/index/vector"
 	"github.com/snowmerak/indexer/lib/store/code"
+	"github.com/snowmerak/indexer/pkg/ext"
 	"github.com/snowmerak/indexer/pkg/jobs"
 	"github.com/snowmerak/indexer/pkg/prompt"
 	"github.com/snowmerak/indexer/pkg/stepper"
@@ -92,7 +94,9 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 		_ = idx.jobs.Submit(func() error {
 			idxNum := is.Next()
 
-			explanation, err := idx.chatGeneration.Generate(ctx, prompt.CodeAnalysis("go", codeBlock))
+			lang := ext.ToLang(filepath.Ext(filePath))
+
+			explanation, err := idx.chatGeneration.Generate(ctx, prompt.CodeAnalysis(lang, codeBlock))
 			if err != nil {
 				return fmt.Errorf("failed to generate explanation: %w", err)
 			}
