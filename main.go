@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
 
 	"github.com/snowmerak/indexer/composite/indexer"
 	"github.com/snowmerak/indexer/lib/analyzer/golang"
@@ -16,6 +17,20 @@ import (
 )
 
 func main() {
+	// indexer init
+	// indexer index <path>
+	// indexer search <query> <limit>
+	// indexer cleanup
+	command := os.Args[1]
+	firstArg := ""
+	if len(os.Args) > 2 {
+		firstArg = os.Args[2]
+	}
+	secondArg := ""
+	if len(os.Args) > 3 {
+		secondArg = os.Args[3]
+	}
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
@@ -29,7 +44,7 @@ func main() {
 		log.Fatalf("failed to create text client: %v", err)
 	}
 
-	oec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelMxbaiEmbedLarge)
+	oec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelBgeM3o5B)
 	if err != nil {
 		log.Fatalf("failed to create embeddings client: %v", err)
 	}
@@ -50,23 +65,49 @@ func main() {
 
 	idxer := indexer.New(jq, gaz, oec, otc, pg, vdb)
 
-	//if err := idxer.Initialize(ctx); err != nil {
-	//	log.Fatalf("failed to initialize indexer: %v", err)
-	//}
-	//
-	//if err := idxer.Index(ctx, "."); err != nil {
-	//	panic(err)
-	//}
+	switch command {
+	case "init":
+		if err := idxer.Initialize(ctx); err != nil {
+			log.Fatalf("failed to initialize indexer: %v", err)
+		}
+	case "index":
+		if firstArg == "" {
+			log.Fatalf("index command requires a path to index")
+		}
 
-	result, err := idxer.Search(ctx, "code explanation prompt", 10)
-	if err != nil {
-		panic(err)
-	}
+		if err := idxer.Index(ctx, firstArg); err != nil {
+			panic(err)
+		}
+	case "search":
+		if firstArg == "" {
+			log.Fatalf("search command requires a query")
+		}
 
-	for _, r := range result {
-		fmt.Println(r.FilePath, r.Line)
-		fmt.Printf("-----------\nCode Block: %s\n-----------\n", r.CodeBlock)
-		fmt.Printf("-----------\nExplanation: %s\n-----------\n", r.Description)
-		fmt.Printf("==========\n")
+		if secondArg == "" {
+			secondArg = "10"
+		}
+
+		limitation, err := strconv.Atoi(secondArg)
+		if err != nil {
+			log.Fatalf("failed to parse limit: %v", err)
+		}
+
+		result, err := idxer.Search(ctx, firstArg, limitation)
+		if err != nil {
+			panic(err)
+		}
+
+		for _, r := range result {
+			fmt.Println(r.FilePath, r.Line)
+			fmt.Printf("-----------\nCode Block: %s\n-----------\n", r.CodeBlock)
+			fmt.Printf("-----------\nExplanation: %s\n-----------\n", r.Description)
+			fmt.Printf("==========\n")
+		}
+	case "cleanup":
+		if err := idxer.CleanUp(ctx); err != nil {
+			log.Fatalf("failed to clean up indexer: %v", err)
+		}
+	default:
+		log.Fatalf("unknown command: %s", command)
 	}
 }
