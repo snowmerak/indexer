@@ -3,6 +3,7 @@ package jobs
 import (
 	"context"
 	"fmt"
+	"sync/atomic"
 	"time"
 
 	"github.com/panjf2000/ants/v2"
@@ -12,6 +13,7 @@ import (
 type Jobs struct {
 	pool  *ants.Pool
 	errCh chan error
+	count atomic.Int64
 }
 
 func New(ctx context.Context, concurrentWorkerSize int) (*Jobs, error) {
@@ -41,6 +43,8 @@ func New(ctx context.Context, concurrentWorkerSize int) (*Jobs, error) {
 }
 
 func (j *Jobs) Submit(job func() error) <-chan error {
+	j.count.Add(1)
+	defer j.count.Add(-1)
 	if err := j.pool.Submit(func() {
 		j.errCh <- job()
 	}); err != nil {
@@ -50,12 +54,9 @@ func (j *Jobs) Submit(job func() error) <-chan error {
 	return j.errCh
 }
 
-func (j *Jobs) MarkEnd() {
-	close(j.errCh)
-}
-
 func (j *Jobs) Close() error {
 	joinedErr := error(nil)
+loop:
 	for err := range j.errCh {
 		if err != nil {
 			if joinedErr == nil {
@@ -64,11 +65,10 @@ func (j *Jobs) Close() error {
 				joinedErr = fmt.Errorf("%w; %w", joinedErr, err)
 			}
 		}
+		if j.count.Load() == 0 {
+			break loop
+		}
 	}
 
 	return joinedErr
-}
-
-func (j *Jobs) Err() <-chan error {
-	return j.errCh
 }
