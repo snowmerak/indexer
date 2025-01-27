@@ -13,7 +13,7 @@ import (
 	"github.com/snowmerak/indexer/pkg/client/ollama"
 	"github.com/snowmerak/indexer/pkg/client/postgres"
 	"github.com/snowmerak/indexer/pkg/client/qdrant"
-	"github.com/snowmerak/indexer/pkg/utill/jobs"
+	"github.com/snowmerak/indexer/pkg/util/jobs"
 )
 
 func main() {

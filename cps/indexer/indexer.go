@@ -12,10 +12,10 @@ import (
 	"github.com/snowmerak/indexer/lib/generation"
 	"github.com/snowmerak/indexer/lib/index/vector"
 	"github.com/snowmerak/indexer/lib/store/code"
-	"github.com/snowmerak/indexer/pkg/utill/ext"
-	"github.com/snowmerak/indexer/pkg/utill/jobs"
-	"github.com/snowmerak/indexer/pkg/utill/prompt"
-	"github.com/snowmerak/indexer/pkg/utill/stepper"
+	"github.com/snowmerak/indexer/pkg/util/ext"
+	"github.com/snowmerak/indexer/pkg/util/jobs"
+	"github.com/snowmerak/indexer/pkg/util/prompt"
+	"github.com/snowmerak/indexer/pkg/util/stepper"
 )
 
 type Indexer struct {
