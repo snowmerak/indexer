@@ -8,7 +8,7 @@ import (
 	"os/signal"
 	"strconv"
 
-	"github.com/snowmerak/indexer/composite/indexer"
+	"github.com/snowmerak/indexer/cps/indexer"
 	"github.com/snowmerak/indexer/pkg/client/golang"
 	"github.com/snowmerak/indexer/pkg/client/ollama"
 	"github.com/snowmerak/indexer/pkg/client/postgres"
