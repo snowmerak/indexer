@@ -60,7 +60,13 @@ func (idx *Indexer) Initialize(ctx context.Context) error {
 		}
 	}()
 
-	if err := idx.codeVectorIndex.Create(ctx, idx.codeEmbeddingsGeneration.Size()); err != nil {
+	cves, err := idx.codeEmbeddingsGeneration.Size()
+	if err != nil {
+		rollback = true
+		return fmt.Errorf("failed to get codeEmbeddingsGeneration size: %w", err)
+	}
+
+	if err := idx.codeVectorIndex.Create(ctx, cves); err != nil {
 		rollback = true
 		return fmt.Errorf("failed to create vectorIndex: %w", err)
 	}
@@ -72,7 +78,13 @@ func (idx *Indexer) Initialize(ctx context.Context) error {
 		}
 	}()
 
-	if err := idx.textVectorIndex.Create(ctx, idx.textEmbeddingsGeneration.Size()); err != nil {
+	tves, err := idx.textEmbeddingsGeneration.Size()
+	if err != nil {
+		rollback = true
+		return fmt.Errorf("failed to get textEmbeddingsGeneration size: %w", err)
+	}
+
+	if err := idx.textVectorIndex.Create(ctx, tves); err != nil {
 		rollback = true
 		return fmt.Errorf("failed to create vectorIndex: %w", err)
 	}

@@ -8,5 +8,5 @@ type Text interface {
 
 type Embeddings interface {
 	Embed(ctx context.Context, prompt string) ([]float64, error)
-	Size() uint64
+	Size() (uint64, error)
 }

@@ -148,13 +148,15 @@ func (c *EmbeddingsClient) Embed(ctx context.Context, prompt string) ([]float64,
 	return embeddings.Embedding, nil
 }
 
-func (c *EmbeddingsClient) Size() uint64 {
+var NotFoundModelErr = fmt.Errorf("model not found")
+
+func (c *EmbeddingsClient) Size() (uint64, error) {
 	switch c.model {
 	case EmbeddingModelBgeM3o5B:
-		return EmbeddingModelBgeM3o5BDim
+		return EmbeddingModelBgeM3o5BDim, nil
 	case EmbeddingModelMxbaiEmbedLarge:
-		return EmbeddingModelMxbaiEmbedLargeDim
+		return EmbeddingModelMxbaiEmbedLargeDim, nil
 	default:
-		return 0
+		return 0, NotFoundModelErr
 	}
 }
