@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strconv"
 
+	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/log"
 	"github.com/snowmerak/indexer/cps/indexer"
 	"github.com/snowmerak/indexer/pkg/client/golang"
 	"github.com/snowmerak/indexer/pkg/client/meilisearch"
@@ -16,6 +18,7 @@ import (
 	"github.com/snowmerak/indexer/pkg/client/pyembeddings"
 	"github.com/snowmerak/indexer/pkg/client/qdrant"
 	"github.com/snowmerak/indexer/pkg/util/jobs"
+	"github.com/snowmerak/indexer/pkg/util/logger"
 )
 
 func main() {
@@ -29,49 +32,66 @@ func main() {
 		secondArg = os.Args[3]
 	}
 
+	logger.Init(zerolog.InfoLevel)
+
+	tableName, err := filepath.Abs(firstArg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get absolute path")
+	}
+
+	{
+		split := filepath.SplitList(filepath.Dir(tableName))
+		if len(split) > 0 {
+			tableName = split[0]
+		}
+		if tableName == "" {
+			tableName = "root_directory"
+		}
+	}
+
+	log.Info().Str("detected_project_name", tableName).Msg("start application")
+
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
 	jq, err := jobs.New(ctx, 36)
 	if err != nil {
-		log.Fatalf("failed to create jobs queue: %v", err)
+		log.Fatal().Err(err).Msg("failed to create job queue")
 	}
 
 	otc, err := ollama.NewTextClient(ctx, ollama.NewClientConfig(), ollama.GenerationModelQwen2o5Coder1o5B)
 	if err != nil {
-		log.Fatalf("failed to create text client: %v", err)
+		log.Fatal().Err(err).Msg("failed to create text client")
 	}
 
 	ocec, err := pyembeddings.NewEmbeddings(ctx, pyembeddings.NewConfig("http://localhost:8392"))
 	if err != nil {
-		log.Fatalf("failed to create code embeddings client: %v", err)
+		log.Fatal().Err(err).Msg("failed to create code embeddings client")
 	}
 
 	otec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelBgeM3o5B)
 	if err != nil {
-		log.Fatalf("failed to create text embeddings client: %v", err)
+		log.Fatal().Err(err).Msg("failed to create text embeddings client")
 	}
-
-	tableName := "indexer"
 
 	cvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6334, tableName+"_code"))
 	if err != nil {
-		log.Fatalf("failed to create vector database: %v", err)
+		log.Fatal().Err(err).Msg("failed to create vector database")
 	}
 
 	tvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6334, tableName+"_desc"))
 	if err != nil {
-		log.Fatalf("failed to create vector database: %v", err)
+		log.Fatal().Err(err).Msg("failed to create vector database")
 	}
 
 	pg, err := postgres.New(ctx, postgres.NewConfig("postgres://postgres:postgres@localhost:5432/postgres", tableName))
 	if err != nil {
-		log.Fatalf("failed to create postgres store: %v", err)
+		log.Fatal().Err(err).Msg("failed to create postgres client")
 	}
 
 	ms, err := meilisearch.New(ctx, meilisearch.NewConfig("http://localhost:7700", "indexer").WithApiKey("tFWSre9Ix9Ltq7nXV87c9O5UP"))
 	if err != nil {
-		log.Fatalf("failed to create meilisearch store: %v", err)
+		log.Fatal().Err(err).Msg("failed to create meilisearch client")
 	}
 
 	gaz := new(golang.Analyzer)
@@ -81,11 +101,11 @@ func main() {
 	switch command {
 	case "init":
 		if err := idxer.Initialize(ctx); err != nil {
-			log.Fatalf("failed to initialize indexer: %v", err)
+			log.Fatal().Err(err).Msg("failed to initialize indexer")
 		}
 	case "index":
 		if firstArg == "" {
-			log.Fatalf("index command requires a path to index")
+			log.Fatal().Msg("index command requires a path")
 		}
 
 		if err := idxer.Index(ctx, firstArg); err != nil {
@@ -93,7 +113,7 @@ func main() {
 		}
 	case "search":
 		if firstArg == "" {
-			log.Fatalf("search command requires a query")
+			log.Fatal().Msg("search command requires a query")
 		}
 
 		if secondArg == "" {
@@ -102,12 +122,12 @@ func main() {
 
 		limitation, err := strconv.Atoi(secondArg)
 		if err != nil {
-			log.Fatalf("failed to parse limit: %v", err)
+			log.Fatal().Err(err).Msg("failed to parse limitation")
 		}
 
 		result, err := idxer.Search(ctx, firstArg, limitation)
 		if err != nil {
-			panic(err)
+			log.Fatal().Err(err).Msg("failed to search")
 		}
 
 		for _, r := range result {
@@ -118,9 +138,9 @@ func main() {
 		}
 	case "cleanup":
 		if err := idxer.CleanUp(ctx); err != nil {
-			log.Fatalf("failed to clean up indexer: %v", err)
+			log.Fatal().Err(err).Msg("failed to cleanup")
 		}
 	default:
-		log.Fatalf("unknown command: %s", command)
+		log.Fatal().Str("input", command).Msg("unknown command")
 	}
 }
