@@ -7,6 +7,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -40,9 +41,9 @@ func main() {
 	}
 
 	{
-		split := filepath.SplitList(filepath.Dir(tableName))
+		split := strings.Split(filepath.Dir(tableName), string(os.PathSeparator))
 		if len(split) > 0 {
-			tableName = split[0]
+			tableName = split[len(split)-1]
 		}
 		if tableName == "" {
 			tableName = "root_directory"
