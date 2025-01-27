@@ -14,7 +14,7 @@ embeddingsService = EmbeddingsService("lemon-mint/gte-modernbert-base-code-3")
 
 @app.post("/embed")
 def read_item(request: EmbeddingsRequest):
-    return {"embeddings": embeddingsService.get_embeddings(request.content)}
+    return {"embedding": embeddingsService.get_embeddings(request.content)}
 
 @app.get("/size")
 def read_item():
