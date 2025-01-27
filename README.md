@@ -34,3 +34,6 @@ When you want to remove the index, you can run:
 ```bash
 indexer clean
 ```
+
+If you want to use other implementation of the interfaces, you can edit the `main.go` file to use the implementation you want.  
+You can check the implementations in the `pkg` package and the interfaces in the `lib` package.
