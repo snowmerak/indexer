@@ -18,7 +18,7 @@ func CodeAnalysis(language string, code string) string {
 		H2("Requirement").
 		PlainText(`Analyze the following code and provide a detailed, step-by-step explanation of its behavior.
 Specifically, identify each variable used in the code, describe its role, data type (if discernible), and track how its value changes during execution.
-Focus on explaining how the code actually works, rather than just its structure.`)
+Focus on explaining how the code actually works, rather than just its structure. Do not repeat the code block in your explanation.`)
 	_ = md.Build()
 
 	return md.String()
