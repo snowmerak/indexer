@@ -4,9 +4,14 @@ import (
 	"context"
 )
 
-type Result[T any] struct {
+type Payload struct {
+	Description string `json:"description"`
+	CodeBlock   string `json:"code_block"`
+}
+
+type Result struct {
 	Id      int     `json:"id"`
-	Payload T       `json:"payload"`
+	Payload Payload `json:"payload"`
 	Score   float64 `json:"score"`
 }
 
@@ -18,10 +23,10 @@ type SearchOption struct {
 	ScoreThreshold float64
 }
 
-type Text[T any] interface {
+type Text interface {
 	Create(ctx context.Context) error
-	Store(ctx context.Context, id int, payload T) error
-	Query(ctx context.Context, query string, option SearchOption) ([]Result[T], error)
+	Store(ctx context.Context, id int, payload Payload) error
+	Query(ctx context.Context, query string, option SearchOption) ([]Result, error)
 	Delete(ctx context.Context, id int) error
 	Drop(ctx context.Context) error
 	UpdateSynonyms(ctx context.Context, synonyms map[string][]string) error
