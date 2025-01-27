@@ -1,13 +1,20 @@
-from gen.rpc.embeddings_pb2 import GetEmbeddingsResponse, GetEmbeddingsRequest
-from gen.rpc.embeddings_pb2_grpc import EmbeddingsServiceServicer
+from pydantic import BaseModel
 from sentence_transformers import SentenceTransformer
 
 
-class EmbeddingsService(EmbeddingsServiceServicer):
+class EmbeddingsService:
     def __init__(self, model):
         self.model_name = model
-        self.model = model = SentenceTransformer(model, cache_folder="./.cache")
+        self.model = SentenceTransformer(model, cache_folder="./.cache")
 
-    def GetEmbeddings(self, request: GetEmbeddingsRequest, context):
-        encoded = self.model.encode(request.contents)
-        return GetEmbeddingsResponse(embeddings=encoded[0])
+    def get_embeddings(self, content: str) -> [float]:
+        encoded = self.model.encode(content)
+        return encoded.tolist()
+
+    def get_size(self):
+        return len(self.model.encode("test"))
+
+class EmbeddingsRequest(BaseModel):
+    content: str
+    model: str
+    api_key: str
