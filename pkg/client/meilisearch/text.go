@@ -13,7 +13,7 @@ import (
 	"github.com/snowmerak/indexer/lib/index/text"
 )
 
-var _ text.Text[json.Marshaler] = (*Client[json.Marshaler])(nil)
+var _ text.Text = (*Client)(nil)
 
 type Config struct {
 	CollectionName           string
@@ -61,12 +61,12 @@ func (c *Config) WithRetryPolicy(maxRetryNumber int, retryStatus ...int) *Config
 	return c
 }
 
-type Client[T any] struct {
+type Client struct {
 	manager meilisearch.ServiceManager
 	config  *Config
 }
 
-func New[T json.Marshaler](ctx context.Context, config *Config) (*Client[T], error) {
+func New(ctx context.Context, config *Config) (*Client, error) {
 	opt := make([]meilisearch.Option, 0)
 
 	if config.ApiKey != "" {
@@ -95,12 +95,12 @@ func New[T json.Marshaler](ctx context.Context, config *Config) (*Client[T], err
 		sm.Close()
 	})
 
-	return &Client[T]{
+	return &Client{
 		manager: sm,
 	}, nil
 }
 
-func (c *Client[T]) Create(ctx context.Context) error {
+func (c *Client) Create(ctx context.Context) error {
 	_, err := c.manager.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        c.config.CollectionName,
 		PrimaryKey: "id",
@@ -113,20 +113,20 @@ func (c *Client[T]) Create(ctx context.Context) error {
 	return nil
 }
 
-type Data[T any] struct {
-	Id      int     `json:"id"`
-	Payload T       `json:"payload"`
-	Score   float64 `json:"_rankingScore,omitempty"`
+type Data struct {
+	Id      int          `json:"id"`
+	Payload text.Payload `json:"payload"`
+	Score   float64      `json:"_rankingScore,omitempty"`
 }
 
-func (c *Client[T]) Store(ctx context.Context, id int, payload T) error {
-	d := Data[T]{
+func (c *Client) Store(ctx context.Context, id int, payload text.Payload) error {
+	d := Data{
 		Id:      id,
 		Payload: payload,
 	}
 
 	idx := c.manager.Index(c.config.CollectionName)
-	_, err := idx.UpdateDocuments([]Data[T]{d}, "id")
+	_, err := idx.UpdateDocuments([]Data{d}, "id")
 	if err != nil {
 		return fmt.Errorf("update documents: %w", err)
 	}
@@ -143,7 +143,7 @@ type SearchResult[T any] struct {
 	Query              string `json:"query"`
 }
 
-func (c *Client[T]) Query(ctx context.Context, query string, option text.SearchOption) ([]text.Result[T], error) {
+func (c *Client) Query(ctx context.Context, query string, option text.SearchOption) ([]text.Result, error) {
 	idx := c.manager.Index(c.config.CollectionName)
 	res, err := idx.SearchRaw(query, &meilisearch.SearchRequest{
 		Limit:                 int64(option.Limit),
@@ -156,20 +156,20 @@ func (c *Client[T]) Query(ctx context.Context, query string, option text.SearchO
 		return nil, fmt.Errorf("search: %w", err)
 	}
 
-	sr := &SearchResult[Data[T]]{}
+	sr := &SearchResult[Data]{}
 	if err := json.Unmarshal(*res, sr); err != nil {
 		return nil, fmt.Errorf("unmarshal search result: %w", err)
 	}
 
-	results := make([]text.Result[T], 0, len(sr.Hits))
+	results := make([]text.Result, 0, len(sr.Hits))
 	for _, hit := range sr.Hits {
-		results = append(results, text.Result[T]{Id: hit.Id, Payload: hit.Payload, Score: hit.Score})
+		results = append(results, text.Result{Id: hit.Id, Payload: hit.Payload, Score: hit.Score})
 	}
 
 	return results, nil
 }
 
-func (c *Client[T]) Delete(ctx context.Context, id int) error {
+func (c *Client) Delete(ctx context.Context, id int) error {
 	idx := c.manager.Index(c.config.CollectionName)
 
 	_, err := idx.DeleteDocument(strconv.FormatInt(int64(id), 10))
@@ -180,7 +180,7 @@ func (c *Client[T]) Delete(ctx context.Context, id int) error {
 	return nil
 }
 
-func (c *Client[T]) Drop(ctx context.Context) error {
+func (c *Client) Drop(ctx context.Context) error {
 	_, err := c.manager.DeleteIndex(c.config.CollectionName)
 	if err != nil {
 		return fmt.Errorf("delete index: %w", err)
@@ -189,7 +189,7 @@ func (c *Client[T]) Drop(ctx context.Context) error {
 	return nil
 }
 
-func (c *Client[T]) UpdateSynonyms(ctx context.Context, synonyms map[string][]string) error {
+func (c *Client) UpdateSynonyms(ctx context.Context, synonyms map[string][]string) error {
 	idx := c.manager.Index(c.config.CollectionName)
 
 	_, err := idx.UpdateSynonyms(&synonyms)
