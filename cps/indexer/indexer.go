@@ -10,6 +10,7 @@ import (
 
 	"github.com/snowmerak/indexer/lib/analyzer"
 	"github.com/snowmerak/indexer/lib/generation"
+	"github.com/snowmerak/indexer/lib/index/text"
 	"github.com/snowmerak/indexer/lib/index/vector"
 	"github.com/snowmerak/indexer/lib/store/code"
 	"github.com/snowmerak/indexer/pkg/util/ext"
@@ -25,9 +26,10 @@ type Indexer struct {
 	chatGeneration       generation.Text
 	codeStore            code.Store
 	vectorIndex          vector.Vector
+	textIndex            text.Text
 }
 
-func New(jobs *jobs.Jobs, analyzer analyzer.Analyzer, embeddingsGeneration generation.Embeddings, chatGeneration generation.Text, codeStore code.Store, vectorIndex vector.Vector) *Indexer {
+func New(jobs *jobs.Jobs, analyzer analyzer.Analyzer, embeddingsGeneration generation.Embeddings, chatGeneration generation.Text, codeStore code.Store, vectorIndex vector.Vector, textIndex text.Text) *Indexer {
 	return &Indexer{
 		jobs:                 jobs,
 		analyzer:             analyzer,
@@ -35,6 +37,7 @@ func New(jobs *jobs.Jobs, analyzer analyzer.Analyzer, embeddingsGeneration gener
 		chatGeneration:       chatGeneration,
 		codeStore:            codeStore,
 		vectorIndex:          vectorIndex,
+		textIndex:            textIndex,
 	}
 }
 
@@ -65,6 +68,18 @@ func (idx *Indexer) Initialize(ctx context.Context) error {
 		}
 	}()
 
+	if err := idx.textIndex.Create(ctx); err != nil {
+		rollback = true
+		return fmt.Errorf("failed to create textIndex: %w", err)
+	}
+	defer func() {
+		if rollback {
+			if err := idx.textIndex.Drop(ctx); err != nil {
+				log.Error().Err(err).Msg("failed to drop textIndex")
+			}
+		}
+	}()
+
 	return nil
 }
 
@@ -77,6 +92,10 @@ func (idx *Indexer) CleanUp(ctx context.Context) error {
 
 	eg.Go(func() error {
 		return idx.vectorIndex.Drop(ctx)
+	})
+
+	eg.Go(func() error {
+		return idx.textIndex.Drop(ctx)
 	})
 
 	if err := eg.Wait(); err != nil {
@@ -149,6 +168,17 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 				return nil
 			})
 
+			eg.Go(func() error {
+				if err := idx.textIndex.Store(ctx, idxNum, text.Payload{
+					Description: explanation,
+					CodeBlock:   codeBlock,
+				}); err != nil {
+					return fmt.Errorf("failed to store text: %w", err)
+				}
+
+				return nil
+			})
+
 			if err := eg.Wait(); err != nil {
 				return fmt.Errorf("failed to index: %w", err)
 			}
@@ -169,6 +199,55 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 }
 
 func (idx *Indexer) Search(ctx context.Context, query string, count int) ([]*code.Data, error) {
+	vr := make([]*code.Data, 0)
+	tr := make([]*code.Data, 0)
+
+	eg := errgroup.Group{}
+
+	eg.Go(func() error {
+		err := error(nil)
+		vr, err = idx.searchVector(ctx, query, count)
+		if err != nil {
+			return fmt.Errorf("failed to search vector: %w", err)
+		}
+
+		return nil
+	})
+
+	eg.Go(func() error {
+		err := error(nil)
+		tr, err = idx.searchText(ctx, query, count)
+		if err != nil {
+			return fmt.Errorf("failed to search text: %w", err)
+		}
+
+		return nil
+	})
+
+	if err := eg.Wait(); err != nil {
+		return nil, fmt.Errorf("failed to search: %w", err)
+	}
+
+	cr := make([]*code.Data, 0, len(vr)+len(tr))
+	inserted := make(map[int]struct{})
+	for _, d := range vr {
+		if _, ok := inserted[d.Id]; !ok {
+			cr = append(cr, d)
+			inserted[d.Id] = struct{}{}
+		}
+	}
+
+	for _, d := range tr {
+		if _, ok := inserted[d.Id]; !ok {
+			cr = append(cr, d)
+			inserted[d.Id] = struct{}{}
+		}
+	}
+
+	return cr, nil
+}
+
+func (idx *Indexer) searchVector(ctx context.Context, query string, count int) ([]*code.Data, error) {
 	embedding, err := idx.embeddingsGeneration.Embed(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to embed query: %w", err)
@@ -205,4 +284,26 @@ func (idx *Indexer) Search(ctx context.Context, query string, count int) ([]*cod
 	}
 
 	return uniqueData, nil
+}
+
+func (idx *Indexer) searchText(ctx context.Context, query string, count int) ([]*code.Data, error) {
+	results, err := idx.textIndex.Query(ctx, query, text.SearchOption{
+		Limit: count,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to query: %w", err)
+	}
+
+	data := make([]*code.Data, 0, len(results))
+
+	for _, result := range results {
+		codeData, err := idx.codeStore.Get(ctx, result.Id)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get code: %w", err)
+		}
+
+		data = append(data, codeData)
+	}
+
+	return data, nil
 }

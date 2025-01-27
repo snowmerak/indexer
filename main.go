@@ -10,6 +10,7 @@ import (
 
 	"github.com/snowmerak/indexer/cps/indexer"
 	"github.com/snowmerak/indexer/pkg/client/golang"
+	"github.com/snowmerak/indexer/pkg/client/meilisearch"
 	"github.com/snowmerak/indexer/pkg/client/ollama"
 	"github.com/snowmerak/indexer/pkg/client/postgres"
 	"github.com/snowmerak/indexer/pkg/client/qdrant"
@@ -57,9 +58,14 @@ func main() {
 		log.Fatalf("failed to create postgres store: %v", err)
 	}
 
+	ms, err := meilisearch.New(ctx, meilisearch.NewConfig("http://localhost:7700", "indexer").WithApiKey("tFWSre9Ix9Ltq7nXV87c9O5UP"))
+	if err != nil {
+		log.Fatalf("failed to create meilisearch store: %v", err)
+	}
+
 	gaz := new(golang.Analyzer)
 
-	idxer := indexer.New(jq, gaz, oec, otc, pg, vdb)
+	idxer := indexer.New(jq, gaz, oec, otc, pg, vdb, ms)
 
 	switch command {
 	case "init":
