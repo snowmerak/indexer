@@ -9,11 +9,11 @@ import (
 	"strconv"
 
 	"github.com/snowmerak/indexer/composite/indexer"
-	"github.com/snowmerak/indexer/lib/analyzer/golang"
-	"github.com/snowmerak/indexer/lib/generation/ollama"
-	"github.com/snowmerak/indexer/lib/index/vector/qdrant"
-	"github.com/snowmerak/indexer/lib/store/code/postgres"
-	"github.com/snowmerak/indexer/pkg/jobs"
+	"github.com/snowmerak/indexer/pkg/client/golang"
+	"github.com/snowmerak/indexer/pkg/client/ollama"
+	"github.com/snowmerak/indexer/pkg/client/postgres"
+	"github.com/snowmerak/indexer/pkg/client/qdrant"
+	"github.com/snowmerak/indexer/pkg/utill/jobs"
 )
 
 func main() {
