@@ -20,24 +20,28 @@ import (
 )
 
 type Indexer struct {
-	jobs                 *jobs.Jobs
-	analyzer             analyzer.Analyzer
-	embeddingsGeneration generation.Embeddings
-	chatGeneration       generation.Text
-	codeStore            code.Store
-	vectorIndex          vector.Vector
-	textIndex            text.Text
+	jobs                     *jobs.Jobs
+	analyzer                 analyzer.Analyzer
+	codeEmbeddingsGeneration generation.Embeddings
+	textEmbeddingsGeneration generation.Embeddings
+	chatGeneration           generation.Text
+	codeStore                code.Store
+	codeVectorIndex          vector.Vector
+	textVectorIndex          vector.Vector
+	textIndex                text.Text
 }
 
-func New(jobs *jobs.Jobs, analyzer analyzer.Analyzer, embeddingsGeneration generation.Embeddings, chatGeneration generation.Text, codeStore code.Store, vectorIndex vector.Vector, textIndex text.Text) *Indexer {
+func New(jobs *jobs.Jobs, analyzer analyzer.Analyzer, codeEmbeddingsGeneration generation.Embeddings, textEmbeddingsGeneration generation.Embeddings, chatGeneration generation.Text, codeStore code.Store, codeVectorIndex vector.Vector, textVectorIndex vector.Vector, textIndex text.Text) *Indexer {
 	return &Indexer{
-		jobs:                 jobs,
-		analyzer:             analyzer,
-		embeddingsGeneration: embeddingsGeneration,
-		chatGeneration:       chatGeneration,
-		codeStore:            codeStore,
-		vectorIndex:          vectorIndex,
-		textIndex:            textIndex,
+		jobs:                     jobs,
+		analyzer:                 analyzer,
+		codeEmbeddingsGeneration: codeEmbeddingsGeneration,
+		textEmbeddingsGeneration: textEmbeddingsGeneration,
+		chatGeneration:           chatGeneration,
+		codeStore:                codeStore,
+		codeVectorIndex:          codeVectorIndex,
+		textVectorIndex:          textVectorIndex,
+		textIndex:                textIndex,
 	}
 }
 
@@ -56,13 +60,13 @@ func (idx *Indexer) Initialize(ctx context.Context) error {
 		}
 	}()
 
-	if err := idx.vectorIndex.Create(ctx, idx.embeddingsGeneration.Size()); err != nil {
+	if err := idx.codeVectorIndex.Create(ctx, idx.codeEmbeddingsGeneration.Size()); err != nil {
 		rollback = true
 		return fmt.Errorf("failed to create vectorIndex: %w", err)
 	}
 	defer func() {
 		if rollback {
-			if err := idx.vectorIndex.Drop(ctx); err != nil {
+			if err := idx.codeVectorIndex.Drop(ctx); err != nil {
 				log.Error().Err(err).Msg("failed to drop vectorIndex")
 			}
 		}
@@ -91,7 +95,7 @@ func (idx *Indexer) CleanUp(ctx context.Context) error {
 	})
 
 	eg.Go(func() error {
-		return idx.vectorIndex.Drop(ctx)
+		return idx.codeVectorIndex.Drop(ctx)
 	})
 
 	eg.Go(func() error {
@@ -107,7 +111,6 @@ func (idx *Indexer) CleanUp(ctx context.Context) error {
 
 func (idx *Indexer) Index(ctx context.Context, path string) error {
 	is := stepper.Int[int]()
-	vis := stepper.Int[int]()
 
 	if err := idx.analyzer.Walk(path, true, func(codeBlock, filePath string, line int) error {
 		_ = idx.jobs.Submit(func() error {
@@ -131,15 +134,13 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 			})
 
 			eg.Go(func() error {
-				vectorIdxNum := vis.Next()
-
-				embedding, err := idx.embeddingsGeneration.Embed(ctx, explanation)
+				embedding, err := idx.textEmbeddingsGeneration.Embed(ctx, explanation)
 				if err != nil {
 					return fmt.Errorf("failed to embed explanation: %w", err)
 				}
 
-				if err := idx.vectorIndex.Store(ctx, vectorIdxNum, &vector.Payload{
-					Id:        vectorIdxNum,
+				if err := idx.textVectorIndex.Store(ctx, idxNum, &vector.Payload{
+					Id:        idxNum,
 					Vector:    embedding,
 					RelatedId: idxNum,
 				}); err != nil {
@@ -150,15 +151,13 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 			})
 
 			eg.Go(func() error {
-				vectorIdxNum := vis.Next()
-
-				embedding, err := idx.embeddingsGeneration.Embed(ctx, codeBlock)
+				embedding, err := idx.codeEmbeddingsGeneration.Embed(ctx, codeBlock)
 				if err != nil {
 					return fmt.Errorf("failed to embed code: %w", err)
 				}
 
-				if err := idx.vectorIndex.Store(ctx, vectorIdxNum, &vector.Payload{
-					Id:        vectorIdxNum,
+				if err := idx.codeVectorIndex.Store(ctx, idxNum, &vector.Payload{
+					Id:        idxNum,
 					Vector:    embedding,
 					RelatedId: idxNum,
 				}); err != nil {
@@ -199,14 +198,25 @@ func (idx *Indexer) Index(ctx context.Context, path string) error {
 }
 
 func (idx *Indexer) Search(ctx context.Context, query string, count int) ([]*code.Data, error) {
-	vr := make([]*code.Data, 0)
+	cvr := make([]*code.Data, 0)
+	tvr := make([]*code.Data, 0)
 	tr := make([]*code.Data, 0)
 
 	eg := errgroup.Group{}
 
 	eg.Go(func() error {
 		err := error(nil)
-		vr, err = idx.searchVector(ctx, query, count)
+		cvr, err = idx.searchVector(ctx, query, count, CodeVector)
+		if err != nil {
+			return fmt.Errorf("failed to search vector: %w", err)
+		}
+
+		return nil
+	})
+
+	eg.Go(func() error {
+		err := error(nil)
+		tvr, err = idx.searchVector(ctx, query, count, TextVector)
 		if err != nil {
 			return fmt.Errorf("failed to search vector: %w", err)
 		}
@@ -228,9 +238,16 @@ func (idx *Indexer) Search(ctx context.Context, query string, count int) ([]*cod
 		return nil, fmt.Errorf("failed to search: %w", err)
 	}
 
-	cr := make([]*code.Data, 0, len(vr)+len(tr))
+	cr := make([]*code.Data, 0, len(cvr)+len(tr))
 	inserted := make(map[int]struct{})
-	for _, d := range vr {
+	for _, d := range cvr {
+		if _, ok := inserted[d.Id]; !ok {
+			cr = append(cr, d)
+			inserted[d.Id] = struct{}{}
+		}
+	}
+
+	for _, d := range tvr {
 		if _, ok := inserted[d.Id]; !ok {
 			cr = append(cr, d)
 			inserted[d.Id] = struct{}{}
@@ -247,13 +264,34 @@ func (idx *Indexer) Search(ctx context.Context, query string, count int) ([]*cod
 	return cr, nil
 }
 
-func (idx *Indexer) searchVector(ctx context.Context, query string, count int) ([]*code.Data, error) {
-	embedding, err := idx.embeddingsGeneration.Embed(ctx, query)
+type VectorType int
+
+const (
+	CodeVector VectorType = iota
+	TextVector
+)
+
+func (idx *Indexer) searchVector(ctx context.Context, query string, count int, searchVectorType VectorType) ([]*code.Data, error) {
+	embeddings := generation.Embeddings(nil)
+	vectorIndex := vector.Vector(nil)
+
+	switch searchVectorType {
+	case CodeVector:
+		embeddings = idx.codeEmbeddingsGeneration
+		vectorIndex = idx.codeVectorIndex
+	case TextVector:
+		embeddings = idx.textEmbeddingsGeneration
+		vectorIndex = idx.textVectorIndex
+	default:
+		return nil, fmt.Errorf("invalid search vector type: %d", searchVectorType)
+	}
+
+	embedding, err := embeddings.Embed(ctx, query)
 	if err != nil {
 		return nil, fmt.Errorf("failed to embed query: %w", err)
 	}
 
-	ids, err := idx.vectorIndex.Search(ctx, embedding, count)
+	ids, err := vectorIndex.Search(ctx, embedding, count)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search: %w", err)
 	}

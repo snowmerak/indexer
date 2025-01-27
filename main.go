@@ -41,14 +41,24 @@ func main() {
 		log.Fatalf("failed to create text client: %v", err)
 	}
 
-	oec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelBgeM3o5B)
+	ocec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelBgeM3o5B)
+	if err != nil {
+		log.Fatalf("failed to create embeddings client: %v", err)
+	}
+
+	otec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelMxbaiEmbedLarge)
 	if err != nil {
 		log.Fatalf("failed to create embeddings client: %v", err)
 	}
 
 	tableName := "indexer"
 
-	vdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6334, tableName))
+	cvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6334, tableName+"_code"))
+	if err != nil {
+		log.Fatalf("failed to create vector database: %v", err)
+	}
+
+	tvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6335, tableName+"_desc"))
 	if err != nil {
 		log.Fatalf("failed to create vector database: %v", err)
 	}
@@ -65,7 +75,7 @@ func main() {
 
 	gaz := new(golang.Analyzer)
 
-	idxer := indexer.New(jq, gaz, oec, otc, pg, vdb, ms)
+	idxer := indexer.New(jq, gaz, ocec, otec, otc, pg, cvdb, tvdb, ms)
 
 	switch command {
 	case "init":
