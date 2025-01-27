@@ -13,6 +13,7 @@ import (
 	"github.com/snowmerak/indexer/pkg/client/meilisearch"
 	"github.com/snowmerak/indexer/pkg/client/ollama"
 	"github.com/snowmerak/indexer/pkg/client/postgres"
+	"github.com/snowmerak/indexer/pkg/client/pyembeddings"
 	"github.com/snowmerak/indexer/pkg/client/qdrant"
 	"github.com/snowmerak/indexer/pkg/util/jobs"
 )
@@ -41,14 +42,14 @@ func main() {
 		log.Fatalf("failed to create text client: %v", err)
 	}
 
-	ocec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelBgeM3o5B)
+	ocec, err := pyembeddings.NewEmbeddings(ctx, pyembeddings.NewConfig("http://localhost:8392"))
 	if err != nil {
-		log.Fatalf("failed to create embeddings client: %v", err)
+		log.Fatalf("failed to create code embeddings client: %v", err)
 	}
 
-	otec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelMxbaiEmbedLarge)
+	otec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelBgeM3o5B)
 	if err != nil {
-		log.Fatalf("failed to create embeddings client: %v", err)
+		log.Fatalf("failed to create text embeddings client: %v", err)
 	}
 
 	tableName := "indexer"
