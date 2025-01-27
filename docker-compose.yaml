@@ -19,3 +19,9 @@ services:
       - MEILI_MASTER_KEY=tFWSre9Ix9Ltq7nXV87c9O5UP
     ports:
       - "7700:7700"
+  pyembeddings:
+    build:
+      context: ./others/pyembeddings
+      dockerfile: Dockerfile
+    ports:
+      - "8392:8392"
