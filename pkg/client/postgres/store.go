@@ -10,7 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/snowmerak/indexer/lib/store/code"
-	"github.com/snowmerak/indexer/lib/store/code/postgres/queries"
+	queries2 "github.com/snowmerak/indexer/pkg/client/postgres/queries"
 )
 
 var _ code.Store = (*Store)(nil)
@@ -31,7 +31,7 @@ func NewConfig(connString string, tableName string) *Config {
 type Store struct {
 	pool   *pgxpool.Pool
 	config *Config
-	conn   *queries.Queries
+	conn   *queries2.Queries
 }
 
 func New(ctx context.Context, cfg *Config) (*Store, error) {
@@ -47,7 +47,7 @@ func New(ctx context.Context, cfg *Config) (*Store, error) {
 	return &Store{
 		pool:   pool,
 		config: cfg,
-		conn:   queries.New(pool),
+		conn:   queries2.New(pool),
 	}, nil
 }
 
@@ -63,7 +63,7 @@ func (s *Store) Create(ctx context.Context) error {
 }
 
 func (s *Store) Save(ctx context.Context, id int, codeBlock string, filePath string, line int, description string) error {
-	if _, err := s.conn.CreateData(ctx, queries.CreateDataParams{
+	if _, err := s.conn.CreateData(ctx, queries2.CreateDataParams{
 		Project:     s.config.TableName,
 		ID:          int64(id),
 		CodeBlock:   pgtype.Text{String: codeBlock, Valid: true},
@@ -78,7 +78,7 @@ func (s *Store) Save(ctx context.Context, id int, codeBlock string, filePath str
 }
 
 func (s *Store) Get(ctx context.Context, id int) (*code.Data, error) {
-	data, err := s.conn.GetData(ctx, queries.GetDataParams{
+	data, err := s.conn.GetData(ctx, queries2.GetDataParams{
 		Project: s.config.TableName,
 		ID:      int64(id),
 	})
@@ -101,7 +101,7 @@ func (s *Store) Gets(ctx context.Context, ids ...int) ([]*code.Data, error) {
 		i32l[i] = int32(id)
 	}
 
-	data, err := s.conn.GetDataList(ctx, queries.GetDataListParams{
+	data, err := s.conn.GetDataList(ctx, queries2.GetDataListParams{
 		Project: s.config.TableName,
 		Column2: i32l,
 	})
@@ -124,7 +124,7 @@ func (s *Store) Gets(ctx context.Context, ids ...int) ([]*code.Data, error) {
 }
 
 func (s *Store) Delete(ctx context.Context, id int) error {
-	if _, err := s.conn.DeleteData(ctx, queries.DeleteDataParams{
+	if _, err := s.conn.DeleteData(ctx, queries2.DeleteDataParams{
 		Project: s.config.TableName,
 		ID:      int64(id),
 	}); err != nil {
@@ -140,7 +140,7 @@ func (s *Store) Deletes(ctx context.Context, ids ...int) error {
 		i32l[i] = int32(id)
 	}
 
-	if _, err := s.conn.DeleteDataList(ctx, queries.DeleteDataListParams{
+	if _, err := s.conn.DeleteDataList(ctx, queries2.DeleteDataListParams{
 		Project: s.config.TableName,
 		Column2: i32l,
 	}); err != nil {

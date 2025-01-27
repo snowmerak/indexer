@@ -7,7 +7,7 @@ import (
 	"github.com/qdrant/go-client/qdrant"
 
 	"github.com/snowmerak/indexer/lib/index/vector"
-	"github.com/snowmerak/indexer/pkg/box"
+	"github.com/snowmerak/indexer/pkg/utill/box"
 )
 
 type Config struct {
