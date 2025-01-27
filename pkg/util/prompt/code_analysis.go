@@ -21,7 +21,7 @@ Specifically, identify each variable used in the code, describe its role, data t
 Focus on explaining how the code actually works, rather than just its structure.`)
 	_ = md.Build()
 
-	return UnwrapCodeAnalysis(md.String())
+	return md.String()
 }
 
 func UnwrapCodeAnalysis(response string) string {
