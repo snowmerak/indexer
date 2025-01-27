@@ -72,6 +72,18 @@ func (idx *Indexer) Initialize(ctx context.Context) error {
 		}
 	}()
 
+	if err := idx.textVectorIndex.Create(ctx, idx.textEmbeddingsGeneration.Size()); err != nil {
+		rollback = true
+		return fmt.Errorf("failed to create vectorIndex: %w", err)
+	}
+	defer func() {
+		if rollback {
+			if err := idx.textVectorIndex.Drop(ctx); err != nil {
+				log.Error().Err(err).Msg("failed to drop vectorIndex")
+			}
+		}
+	}()
+
 	if err := idx.textIndex.Create(ctx); err != nil {
 		rollback = true
 		return fmt.Errorf("failed to create textIndex: %w", err)
@@ -96,6 +108,10 @@ func (idx *Indexer) CleanUp(ctx context.Context) error {
 
 	eg.Go(func() error {
 		return idx.codeVectorIndex.Drop(ctx)
+	})
+
+	eg.Go(func() error {
+		return idx.textVectorIndex.Drop(ctx)
 	})
 
 	eg.Go(func() error {
