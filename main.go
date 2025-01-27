@@ -5,9 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -18,6 +16,7 @@ import (
 	"github.com/snowmerak/indexer/pkg/client/postgres"
 	"github.com/snowmerak/indexer/pkg/client/pyembeddings"
 	"github.com/snowmerak/indexer/pkg/client/qdrant"
+	"github.com/snowmerak/indexer/pkg/util/ext"
 	"github.com/snowmerak/indexer/pkg/util/jobs"
 	"github.com/snowmerak/indexer/pkg/util/logger"
 )
@@ -35,20 +34,7 @@ func main() {
 
 	logger.Init(zerolog.InfoLevel)
 
-	tableName, err := filepath.Abs(firstArg)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to get absolute path")
-	}
-
-	{
-		split := strings.Split(filepath.Dir(tableName), string(os.PathSeparator))
-		if len(split) > 0 {
-			tableName = split[len(split)-1]
-		}
-		if tableName == "" {
-			tableName = "root_directory"
-		}
-	}
+	tableName, err := ext.GetDirectoryName(firstArg)
 
 	log.Info().Str("detected_project_name", tableName).Msg("start application")
 
