@@ -117,6 +117,7 @@ func (c *Client) Size() (int, error) {
 		URL: &url.URL{
 			Scheme: c.url.Scheme,
 			Host:   c.url.Host,
+			Path:   SizePath,
 		},
 	}
 
