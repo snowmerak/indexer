@@ -5,8 +5,9 @@ import (
 )
 
 type Result[T any] struct {
-	Data  Data[T] `json:"data"`
-	Score float64 `json:"score"`
+	Id      int     `json:"id"`
+	Payload T       `json:"payload"`
+	Score   float64 `json:"score"`
 }
 
 type SearchOption struct {
