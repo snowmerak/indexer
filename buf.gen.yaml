@@ -23,5 +23,7 @@ plugins:
     out: others/pyembeddings/gen
   - remote: buf.build/grpc/python
     out: others/pyembeddings/gen
+  - remote: buf.build/protocolbuffers/pyi
+    out: others/pyembeddings/gen
 inputs:
   - directory: ./model/proto
