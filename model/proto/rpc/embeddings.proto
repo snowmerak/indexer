@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+option go_package = "github.com/snowmerak/indexer/model/gen/embeddings";
+
+message GetEmbeddingsRequest {
+    string model = 1;
+    string contents = 2;
+}
+
+message GetEmbeddingsResponse {
+    repeated float embeddings = 1;
+}
+
+service EmbeddingsService {
+    rpc GetEmbeddings(GetEmbeddingsRequest) returns (GetEmbeddingsResponse) {}
+}
