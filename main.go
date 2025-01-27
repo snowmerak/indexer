@@ -58,7 +58,7 @@ func main() {
 		log.Fatalf("failed to create vector database: %v", err)
 	}
 
-	tvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6335, tableName+"_desc"))
+	tvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6334, tableName+"_desc"))
 	if err != nil {
 		log.Fatalf("failed to create vector database: %v", err)
 	}
