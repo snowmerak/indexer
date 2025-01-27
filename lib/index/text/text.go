@@ -24,4 +24,5 @@ type Text[T any] interface {
 	Query(ctx context.Context, query string, option SearchOption) ([]Result[T], error)
 	Delete(ctx context.Context, id int) error
 	Drop(ctx context.Context) error
+	UpdateSynonyms(ctx context.Context, synonyms map[string][]string) error
 }

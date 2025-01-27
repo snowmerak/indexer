@@ -188,3 +188,14 @@ func (c *Client[T]) Drop(ctx context.Context) error {
 
 	return nil
 }
+
+func (c *Client[T]) UpdateSynonyms(ctx context.Context, synonyms map[string][]string) error {
+	idx := c.manager.Index(c.config.CollectionName)
+
+	_, err := idx.UpdateSynonyms(&synonyms)
+	if err != nil {
+		return fmt.Errorf("update synonyms: %w", err)
+	}
+
+	return nil
+}
