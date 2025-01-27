@@ -97,6 +97,7 @@ func New(ctx context.Context, config *Config) (*Client, error) {
 
 	return &Client{
 		manager: sm,
+		config:  config,
 	}, nil
 }
 
