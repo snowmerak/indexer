@@ -7,10 +7,15 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/meilisearch/meilisearch-go"
 
 	"github.com/snowmerak/indexer/lib/index/text"
+)
+
+const (
+	TaskRequestDelay = 200 * time.Millisecond
 )
 
 var _ text.Text = (*Client)(nil)
@@ -102,13 +107,29 @@ func New(ctx context.Context, config *Config) (*Client, error) {
 }
 
 func (c *Client) Create(ctx context.Context) error {
-	_, err := c.manager.CreateIndex(&meilisearch.IndexConfig{
+	info, err := c.manager.CreateIndex(&meilisearch.IndexConfig{
 		Uid:        c.config.CollectionName,
 		PrimaryKey: "id",
 	})
 
 	if err != nil {
 		return fmt.Errorf("create index: %w", err)
+	}
+
+	task := &meilisearch.Task{
+		Status: meilisearch.TaskStatusEnqueued,
+	}
+	for task.Status != meilisearch.TaskStatusSucceeded && task.Status != meilisearch.TaskStatusFailed {
+		task, err = c.manager.GetTaskWithContext(ctx, info.TaskUID)
+		if err != nil {
+			return fmt.Errorf("get task: %w", err)
+		}
+
+		if task.Status == meilisearch.TaskStatusFailed {
+			return fmt.Errorf("task failed: %s", task.Error)
+		}
+
+		time.Sleep(TaskRequestDelay)
 	}
 
 	return nil
@@ -182,9 +203,25 @@ func (c *Client) Delete(ctx context.Context, id int) error {
 }
 
 func (c *Client) Drop(ctx context.Context) error {
-	_, err := c.manager.DeleteIndex(c.config.CollectionName)
+	info, err := c.manager.DeleteIndex(c.config.CollectionName)
 	if err != nil {
 		return fmt.Errorf("delete index: %w", err)
+	}
+
+	task := &meilisearch.Task{
+		Status: meilisearch.TaskStatusEnqueued,
+	}
+	for task.Status != meilisearch.TaskStatusSucceeded && task.Status != meilisearch.TaskStatusFailed {
+		task, err = c.manager.GetTaskWithContext(ctx, info.TaskUID)
+		if err != nil {
+			return fmt.Errorf("get task: %w", err)
+		}
+
+		if task.Status == meilisearch.TaskStatusFailed {
+			return fmt.Errorf("task failed: %s", task.Error)
+		}
+
+		time.Sleep(TaskRequestDelay)
 	}
 
 	return nil
