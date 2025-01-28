@@ -1,6 +1,6 @@
 module github.com/snowmerak/indexer
 
-go 1.24rc1
+go 1.23.5
 
 require (
 	github.com/ClickHouse/clickhouse-go/v2 v2.30.1
