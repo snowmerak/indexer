@@ -10,6 +10,7 @@ import (
 	"github.com/ClickHouse/clickhouse-go/v2/lib/driver"
 
 	"github.com/snowmerak/indexer/lib/store/code"
+	"github.com/snowmerak/indexer/pkg/config"
 )
 
 type Config struct {
@@ -97,6 +98,22 @@ type Clickhouse struct {
 }
 
 var _ code.Store = (*Clickhouse)(nil)
+
+func init() {
+	code.RegisterStore("clickhouse", func(ctx context.Context, cc *config.ClientConfig) (code.Store, error) {
+		cfg := NewConfig(cc.Project, cc.Host...).
+			WithDatabase(cc.Database).
+			WithUsername(cc.User).
+			WithPassword(cc.Password).
+			WithDialTimeout(5 * time.Second).
+			WithMaxOpenConn(10).
+			WithMaxIdleConn(5).
+			WithConnMaxLifetime(30 * time.Minute).
+			WithBlockBufferSize(10)
+
+		return New(ctx, cfg)
+	})
+}
 
 func New(ctx context.Context, cfg *Config) (*Clickhouse, error) {
 	opt := &clickhouse.Options{

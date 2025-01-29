@@ -11,9 +11,18 @@ import (
 
 	"github.com/snowmerak/indexer/lib/store/code"
 	queries2 "github.com/snowmerak/indexer/pkg/client/postgres/queries"
+	"github.com/snowmerak/indexer/pkg/config"
 )
 
 var _ code.Store = (*Store)(nil)
+
+func init() {
+	code.RegisterStore("postgres", func(ctx context.Context, cc *config.ClientConfig) (code.Store, error) {
+		cfg := NewConfig(fmt.Sprintf("postgresql://%s@%s:%s/%s", cc.User, cc.Password, cc.Host[0], cc.Database), cc.Project)
+
+		return New(ctx, cfg)
+	})
+}
 
 type Config struct {
 	ConnectionString string

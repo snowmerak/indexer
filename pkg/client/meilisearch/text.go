@@ -12,6 +12,7 @@ import (
 	"github.com/meilisearch/meilisearch-go"
 
 	"github.com/snowmerak/indexer/lib/index/text"
+	"github.com/snowmerak/indexer/pkg/config"
 )
 
 const (
@@ -19,6 +20,16 @@ const (
 )
 
 var _ text.Text = (*Client)(nil)
+
+func init() {
+	text.RegisterText("meilisearch", func(ctx context.Context, cc *config.ClientConfig) (text.Text, error) {
+		cfg := NewConfig(cc.Host[0], cc.Database).
+			WithApiKey(cc.ApiKey).
+			WithRetryPolicy(10, 500, 502, 503, 504)
+
+		return New(ctx, cfg)
+	})
+}
 
 type Config struct {
 	CollectionName           string

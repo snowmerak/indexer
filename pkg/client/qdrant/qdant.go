@@ -3,10 +3,13 @@ package qdrant
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/qdrant/go-client/qdrant"
 
 	"github.com/snowmerak/indexer/lib/index/vector"
+	"github.com/snowmerak/indexer/pkg/config"
 	"github.com/snowmerak/indexer/pkg/util/box"
 )
 
@@ -38,6 +41,22 @@ func (c *Config) WithTLS() *Config {
 }
 
 var _ vector.Vector = (*Vector)(nil)
+
+func init() {
+	vector.RegisterVector("qdrant", func(ctx context.Context, cc *config.ClientConfig) (vector.Vector, error) {
+		latestSemiColon := strings.LastIndex(cc.Host[0], ":")
+		host := cc.Host[0][:latestSemiColon]
+		port, err := strconv.Atoi(cc.Host[0][latestSemiColon+1:])
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse port: %w", err)
+		}
+
+		cfg := NewConfig(host, port, cc.Project).
+			WithAPIKey(cc.ApiKey)
+
+		return New(ctx, cfg)
+	})
+}
 
 type Vector struct {
 	client *qdrant.Client

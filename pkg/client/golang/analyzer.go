@@ -2,6 +2,7 @@ package golang
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -11,9 +12,16 @@ import (
 	"path/filepath"
 
 	"github.com/snowmerak/indexer/lib/analyzer"
+	"github.com/snowmerak/indexer/pkg/config"
 )
 
 var _ analyzer.Analyzer = &Analyzer{}
+
+func init() {
+	analyzer.Register("golang", func(_ context.Context, cc *config.ClientConfig) (analyzer.Analyzer, error) {
+		return &Analyzer{}, nil
+	})
+}
 
 type Analyzer struct {
 }

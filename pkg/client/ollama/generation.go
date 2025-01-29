@@ -6,10 +6,12 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/ollama/ollama/api"
 
 	"github.com/snowmerak/indexer/lib/generation"
+	"github.com/snowmerak/indexer/pkg/config"
 )
 
 const (
@@ -63,6 +65,21 @@ func (c *ClientConfig) SetHTTPClient(client *http.Client) {
 }
 
 var _ generation.Text = &TextClient{}
+
+func init() {
+	generation.RegisterText("ollama", func(ctx context.Context, cc *config.ClientConfig) (generation.Text, error) {
+		cfg := NewClientConfig()
+		if err := cfg.SetURL(cc.Host[0]); err != nil {
+			return nil, fmt.Errorf("failed to set url: %w", err)
+		}
+
+		cfg.SetHTTPClient(&http.Client{
+			Timeout: 5 * time.Minute,
+		})
+
+		return NewTextClient(ctx, cfg, cc.Model)
+	})
+}
 
 type TextClient struct {
 	client *api.Client
