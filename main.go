@@ -10,12 +10,12 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/snowmerak/indexer/cps/indexer"
-	"github.com/snowmerak/indexer/pkg/client/golang"
-	"github.com/snowmerak/indexer/pkg/client/meilisearch"
-	"github.com/snowmerak/indexer/pkg/client/ollama"
-	"github.com/snowmerak/indexer/pkg/client/postgres"
-	"github.com/snowmerak/indexer/pkg/client/pyembeddings"
-	"github.com/snowmerak/indexer/pkg/client/qdrant"
+	"github.com/snowmerak/indexer/lib/analyzer"
+	"github.com/snowmerak/indexer/lib/generation"
+	"github.com/snowmerak/indexer/lib/index/text"
+	"github.com/snowmerak/indexer/lib/index/vector"
+	"github.com/snowmerak/indexer/lib/store/code"
+	"github.com/snowmerak/indexer/pkg/config"
 	"github.com/snowmerak/indexer/pkg/util/ext"
 	"github.com/snowmerak/indexer/pkg/util/jobs"
 	"github.com/snowmerak/indexer/pkg/util/logger"
@@ -35,96 +35,128 @@ func main() {
 	logger.Init(zerolog.InfoLevel)
 
 	tableName, err := ext.GetDirectoryName(firstArg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to get project name")
+	}
 
 	log.Info().Str("detected_project_name", tableName).Msg("start application")
 
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
 	defer cancel()
 
-	jq, err := jobs.New(ctx, 36)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create job queue")
-	}
-
-	otc, err := ollama.NewTextClient(ctx, ollama.NewClientConfig(), ollama.GenerationModelQwen2o5Coder1o5B)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create text client")
-	}
-
-	ocec, err := pyembeddings.NewEmbeddings(ctx, pyembeddings.NewConfig("http://localhost:8392"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create code embeddings client")
-	}
-
-	otec, err := ollama.NewEmbeddingsClient(ctx, ollama.NewClientConfig(), ollama.EmbeddingModelBgeM3o5B)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create text embeddings client")
-	}
-
-	cvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6334, tableName+"_code"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create vector database")
-	}
-
-	tvdb, err := qdrant.New(ctx, qdrant.NewConfig("localhost", 6334, tableName+"_desc"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create vector database")
-	}
-
-	pg, err := postgres.New(ctx, postgres.NewConfig("postgres://postgres:postgres@localhost:5432/postgres", tableName))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create postgres client")
-	}
-
-	ms, err := meilisearch.New(ctx, meilisearch.NewConfig("http://localhost:7700", "indexer").WithApiKey("tFWSre9Ix9Ltq7nXV87c9O5UP"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create meilisearch client")
-	}
-
-	gaz := new(golang.Analyzer)
-
-	idxer := indexer.New(jq, gaz, ocec, otec, otc, pg, cvdb, tvdb, ms)
-
 	switch command {
-	case "init":
-		if err := idxer.Initialize(ctx); err != nil {
-			log.Fatal().Err(err).Msg("failed to initialize indexer")
-		}
-	case "index":
-		if firstArg == "" {
-			log.Fatal().Msg("index command requires a path")
-		}
-
-		if err := idxer.Index(ctx, firstArg); err != nil {
-			panic(err)
-		}
-	case "search":
-		if firstArg == "" {
-			log.Fatal().Msg("search command requires a query")
-		}
-
-		if secondArg == "" {
-			secondArg = "10"
-		}
-
-		limitation, err := strconv.Atoi(secondArg)
+	case "new":
+		cfg := config.Default()
+		f, err := os.Create(config.DefaultFilename)
 		if err != nil {
-			log.Fatal().Err(err).Msg("failed to parse limitation")
+			log.Fatal().Err(err).Msg("failed to create config file")
+		}
+		defer f.Close()
+
+		if err := cfg.MarshalTo(f); err != nil {
+			log.Fatal().Err(err).Msg("failed to write config")
 		}
 
-		result, err := idxer.Search(ctx, firstArg, limitation)
-		if err != nil {
-			log.Fatal().Err(err).Msg("failed to search")
-		}
-
-		for _, r := range result {
-			fmt.Println(r.ToMarkdown("go"))
-		}
-	case "cleanup":
-		if err := idxer.CleanUp(ctx); err != nil {
-			log.Fatal().Err(err).Msg("failed to cleanup")
-		}
+		log.Info().Str("filename", config.DefaultFilename).Msg("new config file created")
 	default:
-		log.Fatal().Str("input", command).Msg("unknown command")
+		cfg := config.Default()
+		f, err := os.Open(config.DefaultFilename)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to open config file")
+		}
+
+		if err := cfg.UnmarshalFrom(f); err != nil {
+			log.Fatal().Err(err).Msg("failed to read config")
+		}
+
+		jq, err := jobs.New(ctx, cfg.MaxConcurrentJobs)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create job queue")
+		}
+
+		otc, err := generation.GetText(ctx, cfg.Generation.Chat.Type, &cfg.Generation.Chat)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create text client")
+		}
+
+		ocec, err := generation.GetEmbeddings(ctx, cfg.Embeddings.Code.Type, &cfg.Embeddings.Code)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create code embeddings client")
+		}
+
+		otec, err := generation.GetEmbeddings(ctx, cfg.Embeddings.Description.Type, &cfg.Embeddings.Description)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create text embeddings client")
+		}
+
+		cvdb, err := vector.GetVector(ctx, cfg.Index.Vector.Code.Type, &cfg.Index.Vector.Code)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create vector database")
+		}
+
+		tvdb, err := vector.GetVector(ctx, cfg.Index.Vector.Description.Type, &cfg.Index.Vector.Description)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create vector database")
+		}
+
+		pg, err := code.GetStore(ctx, cfg.Store.Code.Type, &cfg.Store.Code)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create postgres client")
+		}
+
+		ms, err := text.GetText(ctx, cfg.Index.Text.Index.Type, &cfg.Index.Text.Index)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create meilisearch client")
+		}
+
+		gaz, err := analyzer.Get(ctx, cfg.Analyzer, nil)
+		if err != nil {
+			log.Fatal().Err(err).Msg("failed to create analyzer")
+		}
+
+		idxer := indexer.New(jq, gaz, ocec, otec, otc, pg, cvdb, tvdb, ms)
+
+		switch command {
+		case "init":
+			if err := idxer.Initialize(ctx); err != nil {
+				log.Fatal().Err(err).Msg("failed to initialize indexer")
+			}
+		case "index":
+			if firstArg == "" {
+				log.Fatal().Msg("index command requires a path")
+			}
+
+			if err := idxer.Index(ctx, firstArg); err != nil {
+				panic(err)
+			}
+		case "search":
+			if firstArg == "" {
+				log.Fatal().Msg("search command requires a query")
+			}
+
+			if secondArg == "" {
+				secondArg = "10"
+			}
+
+			limitation, err := strconv.Atoi(secondArg)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to parse limitation")
+			}
+
+			result, err := idxer.Search(ctx, firstArg, limitation)
+			if err != nil {
+				log.Fatal().Err(err).Msg("failed to search")
+			}
+
+			for _, r := range result {
+				fmt.Println(r.ToMarkdown(gaz.LanguageCode()))
+			}
+		case "cleanup":
+			if err := idxer.CleanUp(ctx); err != nil {
+				log.Fatal().Err(err).Msg("failed to cleanup")
+			}
+		default:
+			log.Fatal().Str("input", command).Msg("unknown command")
+		}
 	}
 }
