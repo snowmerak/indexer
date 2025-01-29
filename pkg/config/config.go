@@ -1,17 +1,16 @@
 package config
 
 type ClientConfig struct {
-	Type      string `yaml:"type,omitempty"`
-	Scheme    string `yaml:"scheme,omitempty"`
-	Host      string `yaml:"host,omitempty"`
-	Port      int    `yaml:"port,omitempty"`
-	Database  string `yaml:"database,omitempty"`
-	User      string `yaml:"user,omitempty"`
-	Password  string `yaml:"password,omitempty"`
-	ApiKey    string `yaml:"api_key,omitempty"`
-	Model     string `yaml:"model,omitempty"`
-	Dimension int    `yaml:"dimension,omitempty"`
-	Project   string `yaml:"project,omitempty"`
+	Type      string   `yaml:"type,omitempty"`
+	Scheme    string   `yaml:"scheme,omitempty"`
+	Host      []string `yaml:"host,omitempty"`
+	Database  string   `yaml:"database,omitempty"`
+	User      string   `yaml:"user,omitempty"`
+	Password  string   `yaml:"password,omitempty"`
+	ApiKey    string   `yaml:"api_key,omitempty"`
+	Model     string   `yaml:"model,omitempty"`
+	Dimension int      `yaml:"dimension,omitempty"`
+	Project   string   `yaml:"project,omitempty"`
 }
 
 type Config struct {
@@ -48,11 +47,11 @@ func DefaultConfig() *Config {
 		}{
 			Code: ClientConfig{
 				Type: "pyembeddings",
-				Host: "http://localhost:8392",
+				Host: []string{"http://localhost:8392"},
 			},
 			Description: ClientConfig{
 				Type:      "ollama",
-				Host:      "http://localhost:11434",
+				Host:      []string{"http://localhost:11434"},
 				Model:     "bge-m3",
 				Dimension: 1024,
 			},
@@ -62,7 +61,7 @@ func DefaultConfig() *Config {
 		}{
 			Chat: ClientConfig{
 				Type:  "ollama",
-				Host:  "http://localhost:11434",
+				Host:  []string{"http://localhost:11434"},
 				Model: "qwen2.5-coder:1.5b",
 			},
 		},
@@ -71,8 +70,7 @@ func DefaultConfig() *Config {
 		}{
 			Code: ClientConfig{
 				Type:     "postgres",
-				Host:     "localhost",
-				Port:     5432,
+				Host:     []string{"localhost:5432"},
 				User:     "postgres",
 				Password: "postgres",
 				Database: "postgres",
@@ -94,14 +92,12 @@ func DefaultConfig() *Config {
 			}{
 				Code: ClientConfig{
 					Type:    "qdrant",
-					Host:    "localhost",
-					Port:    6334,
+					Host:    []string{"localhost:6334"},
 					Project: "your-project-name-code",
 				},
 				Description: ClientConfig{
 					Type:    "qdrant",
-					Host:    "localhost",
-					Port:    6334,
+					Host:    []string{"localhost:6334"},
 					Project: "your-project-name-description",
 				},
 			},
@@ -110,7 +106,7 @@ func DefaultConfig() *Config {
 			}{
 				Index: ClientConfig{
 					Type:    "meilisearch",
-					Host:    "http://localhost:7700",
+					Host:    []string{"http://localhost:7700"},
 					ApiKey:  "tFWSre9Ix9Ltq7nXV87c9O5UP",
 					Project: "your-project-name",
 				},
