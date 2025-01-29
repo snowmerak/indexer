@@ -35,7 +35,7 @@ indexer index . # or the path you want to index
 After that, you can search for a function or a variable in the project:
 
 ```bash
-indexer search <query> <count>
+indexer search "<query>"
 ```
 
 When you want to remove the index, you can run:
