@@ -144,7 +144,7 @@ func main() {
 			}
 
 			if secondArg == "" {
-				secondArg = "10"
+				secondArg = strconv.FormatInt(int64(cfg.SearchCount), 10)
 			}
 
 			limitation, err := strconv.Atoi(secondArg)
