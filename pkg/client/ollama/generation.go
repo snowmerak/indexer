@@ -79,6 +79,19 @@ func init() {
 
 		return NewTextClient(ctx, cfg, cc.Model)
 	})
+
+	generation.RegisterEmbeddings("ollama", func(ctx context.Context, cc *config.ClientConfig) (generation.Embeddings, error) {
+		cfg := NewClientConfig()
+		if err := cfg.SetURL(cc.Host[0]); err != nil {
+			return nil, fmt.Errorf("failed to set url: %w", err)
+		}
+
+		cfg.SetHTTPClient(&http.Client{
+			Timeout: 5 * time.Minute,
+		})
+
+		return NewEmbeddingsClient(ctx, cfg, cc.Model)
+	})
 }
 
 type TextClient struct {
