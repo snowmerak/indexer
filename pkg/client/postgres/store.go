@@ -18,7 +18,7 @@ var _ code.Store = (*Store)(nil)
 
 func init() {
 	code.RegisterStore("postgres", func(ctx context.Context, cc *config.ClientConfig) (code.Store, error) {
-		cfg := NewConfig(fmt.Sprintf("postgresql://%s@%s:%s/%s", cc.User, cc.Password, cc.Host[0], cc.Database), cc.Project)
+		cfg := NewConfig(fmt.Sprintf("postgresql://%s:%s@%s/%s", cc.User, cc.Password, cc.Host[0], cc.Database), cc.Project)
 
 		return New(ctx, cfg)
 	})
