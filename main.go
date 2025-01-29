@@ -21,6 +21,7 @@ import (
 	"github.com/snowmerak/indexer/pkg/util/logger"
 
 	_ "github.com/snowmerak/indexer/pkg/client/clickhouse"
+	_ "github.com/snowmerak/indexer/pkg/client/gemini"
 	_ "github.com/snowmerak/indexer/pkg/client/golang"
 	_ "github.com/snowmerak/indexer/pkg/client/meilisearch"
 	_ "github.com/snowmerak/indexer/pkg/client/ollama"
