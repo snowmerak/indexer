@@ -1,5 +1,15 @@
 package config
 
+import (
+	"io"
+
+	"gopkg.in/yaml.v3"
+)
+
+const (
+	DefaultFilename = "config.yaml"
+)
+
 type ClientConfig struct {
 	Type      string   `yaml:"type,omitempty"`
 	Scheme    string   `yaml:"scheme,omitempty"`
@@ -113,4 +123,20 @@ func DefaultConfig() *Config {
 			},
 		},
 	}
+}
+
+func (c *Config) MarshalTo(w io.Writer) error {
+	return yaml.NewEncoder(w).Encode(c)
+}
+
+func (c *Config) MarshalToBytes() ([]byte, error) {
+	return yaml.Marshal(c)
+}
+
+func (c *Config) UnmarshalFrom(r io.Reader) error {
+	return yaml.NewDecoder(r).Decode(c)
+}
+
+func (c *Config) UnmarshalFromBytes(b []byte) error {
+	return yaml.Unmarshal(b, c)
 }
