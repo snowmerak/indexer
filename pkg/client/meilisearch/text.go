@@ -23,7 +23,7 @@ var _ text.Text = (*Client)(nil)
 
 func init() {
 	text.RegisterText("meilisearch", func(ctx context.Context, cc *config.ClientConfig) (text.Text, error) {
-		cfg := NewConfig(cc.Host[0], cc.Database).
+		cfg := NewConfig(cc.Host[0], cc.Project).
 			WithApiKey(cc.ApiKey).
 			WithRetryPolicy(10, 500, 502, 503, 504)
 
