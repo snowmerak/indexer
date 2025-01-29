@@ -19,6 +19,14 @@ import (
 	"github.com/snowmerak/indexer/pkg/util/ext"
 	"github.com/snowmerak/indexer/pkg/util/jobs"
 	"github.com/snowmerak/indexer/pkg/util/logger"
+
+	_ "github.com/snowmerak/indexer/pkg/client/clickhouse"
+	_ "github.com/snowmerak/indexer/pkg/client/golang"
+	_ "github.com/snowmerak/indexer/pkg/client/meilisearch"
+	_ "github.com/snowmerak/indexer/pkg/client/ollama"
+	_ "github.com/snowmerak/indexer/pkg/client/postgres"
+	_ "github.com/snowmerak/indexer/pkg/client/pyembeddings"
+	_ "github.com/snowmerak/indexer/pkg/client/qdrant"
 )
 
 func main() {
