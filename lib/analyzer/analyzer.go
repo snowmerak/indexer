@@ -10,6 +10,7 @@ import (
 
 type Analyzer interface {
 	Walk(path string, recursive bool, callback func(codeBlock, filePath string, line int) error) error
+	LanguageCode() string
 }
 
 var registered = sync.Map{}

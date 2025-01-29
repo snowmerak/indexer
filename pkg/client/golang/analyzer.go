@@ -112,3 +112,7 @@ func (a *Analyzer) Walk(path string, recursive bool, callback func(codeBlock, fi
 
 	return nil
 }
+
+func (a *Analyzer) LanguageCode() string {
+	return "go"
+}
