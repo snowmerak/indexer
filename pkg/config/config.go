@@ -11,6 +11,7 @@ type ClientConfig struct {
 	ApiKey    string `yaml:"api_key,omitempty"`
 	Model     string `yaml:"model,omitempty"`
 	Dimension int    `yaml:"dimension,omitempty"`
+	Project   string `yaml:"project,omitempty"`
 }
 
 type Config struct {
@@ -75,6 +76,7 @@ func DefaultConfig() *Config {
 				User:     "postgres",
 				Password: "postgres",
 				Database: "postgres",
+				Project:  "your-project-name",
 			},
 		},
 		Index: struct {
@@ -91,23 +93,26 @@ func DefaultConfig() *Config {
 				Description ClientConfig `yaml:"description,omitempty"`
 			}{
 				Code: ClientConfig{
-					Type: "qdrant",
-					Host: "localhost",
-					Port: 6334,
+					Type:    "qdrant",
+					Host:    "localhost",
+					Port:    6334,
+					Project: "your-project-name-code",
 				},
 				Description: ClientConfig{
-					Type: "qdrant",
-					Host: "localhost",
-					Port: 6334,
+					Type:    "qdrant",
+					Host:    "localhost",
+					Port:    6334,
+					Project: "your-project-name-description",
 				},
 			},
 			Text: struct {
 				Index ClientConfig `yaml:"index,omitempty"`
 			}{
 				Index: ClientConfig{
-					Type:   "meilisearch",
-					Host:   "http://localhost:7700",
-					ApiKey: "tFWSre9Ix9Ltq7nXV87c9O5UP",
+					Type:    "meilisearch",
+					Host:    "http://localhost:7700",
+					ApiKey:  "tFWSre9Ix9Ltq7nXV87c9O5UP",
+					Project: "your-project-name",
 				},
 			},
 		},
