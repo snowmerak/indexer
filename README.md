@@ -12,14 +12,22 @@ podman compose up
 # docker compose up
 
 go install
-
-# initialize the database
-indexer init
 ```
 
 And move to the project you want to index and run:
 
 ```bash
+indexer new
+```
+
+Then indexer makes a new index file(`config.yaml`) in the project directory.
+
+And initialize the database and index the project:
+
+```bash
+# initialize the database
+indexer init
+
 indexer index . # or the path you want to index
 ```
 
