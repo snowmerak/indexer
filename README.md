@@ -20,7 +20,8 @@ And move to the project you want to index and run:
 indexer new
 ```
 
-Then indexer makes a new index file(`config.yaml`) in the project directory.
+Then indexer makes a new index file(`config.yaml`) in the project directory.  
+You must edit the `config.yaml` file to set the environment variables.
 
 And initialize the database and index the project:
 
