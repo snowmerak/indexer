@@ -47,7 +47,7 @@ type Config struct {
 	} `yaml:"index,omitempty"`
 }
 
-func DefaultConfig() *Config {
+func Default() *Config {
 	return &Config{
 		MaxConcurrentJobs: 36,
 		Analyzer:          "golang",
