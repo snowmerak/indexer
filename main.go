@@ -118,10 +118,7 @@ func main() {
 		}
 
 		for _, r := range result {
-			fmt.Println(r.FilePath, r.Line)
-			fmt.Printf("-----------\nCode Block: %s\n-----------\n", r.CodeBlock)
-			fmt.Printf("-----------\nExplanation: %s\n-----------\n", r.Description)
-			fmt.Printf("==========\n")
+			fmt.Println(r.ToMarkdown("go"))
 		}
 	case "cleanup":
 		if err := idxer.CleanUp(ctx); err != nil {
