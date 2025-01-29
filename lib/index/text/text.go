@@ -38,15 +38,15 @@ type Text interface {
 
 var registeredText = sync.Map{}
 
-type TextConstructor func(*config.ClientConfig) (Text, error)
+type TextConstructor func(context.Context, *config.ClientConfig) (Text, error)
 
 func RegisterText(name string, text TextConstructor) {
 	registeredText.Store(name, text)
 }
 
-func GetText(name string, config *config.ClientConfig) (Text, error) {
+func GetText(ctx context.Context, name string, config *config.ClientConfig) (Text, error) {
 	if v, ok := registeredText.Load(name); ok {
-		text, err := v.(TextConstructor)(config)
+		text, err := v.(TextConstructor)(ctx, config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create text client: %w", err)
 		}

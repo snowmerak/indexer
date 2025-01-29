@@ -31,15 +31,15 @@ type Vector interface {
 
 var registeredVector = sync.Map{}
 
-type VectorConstructor func(*config.ClientConfig) (Vector, error)
+type VectorConstructor func(context.Context, *config.ClientConfig) (Vector, error)
 
 func RegisterVector(name string, vector VectorConstructor) {
 	registeredVector.Store(name, vector)
 }
 
-func GetVector(name string, config *config.ClientConfig) (Vector, error) {
+func GetVector(ctx context.Context, name string, config *config.ClientConfig) (Vector, error) {
 	if v, ok := registeredVector.Load(name); ok {
-		vector, err := v.(VectorConstructor)(config)
+		vector, err := v.(VectorConstructor)(ctx, config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create vector client: %w", err)
 		}

@@ -45,15 +45,15 @@ type Store interface {
 
 var registeredStore = sync.Map{}
 
-type StoreConstructor func(*config.ClientConfig) (Store, error)
+type StoreConstructor func(context.Context, *config.ClientConfig) (Store, error)
 
 func RegisterStore(name string, store StoreConstructor) {
 	registeredStore.Store(name, store)
 }
 
-func GetStore(name string, config *config.ClientConfig) (Store, error) {
+func GetStore(ctx context.Context, name string, config *config.ClientConfig) (Store, error) {
 	if v, ok := registeredStore.Load(name); ok {
-		store, err := v.(StoreConstructor)(config)
+		store, err := v.(StoreConstructor)(ctx, config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create store: %w", err)
 		}

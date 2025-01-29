@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"context"
 	"fmt"
 	"sync"
 
@@ -13,15 +14,15 @@ type Analyzer interface {
 
 var registered = sync.Map{}
 
-type Constructor func(*config.ClientConfig) (Analyzer, error)
+type Constructor func(context.Context, *config.ClientConfig) (Analyzer, error)
 
 func Register(name string, constructor Constructor) {
 	registered.Store(name, constructor)
 }
 
-func Get(name string, config *config.ClientConfig) (Analyzer, error) {
+func Get(ctx context.Context, name string, config *config.ClientConfig) (Analyzer, error) {
 	if v, ok := registered.Load(name); ok {
-		analyzer, err := v.(Constructor)(config)
+		analyzer, err := v.(Constructor)(ctx, config)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create analyzer: %w", err)
 		}
