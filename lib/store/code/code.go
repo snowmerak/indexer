@@ -4,8 +4,10 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/nao1215/markdown"
+	"github.com/snowmerak/indexer/pkg/config"
 )
 
 type Data struct {
@@ -39,4 +41,23 @@ type Store interface {
 	Delete(ctx context.Context, id int) error
 	Deletes(ctx context.Context, ids ...int) error
 	Drop(ctx context.Context) error
+}
+
+var registeredStore = sync.Map{}
+
+type StoreConstructor func(*config.ClientConfig) (Store, error)
+
+func RegisterStore(name string, store StoreConstructor) {
+	registeredStore.Store(name, store)
+}
+
+func GetStore(name string, config *config.ClientConfig) (Store, error) {
+	if v, ok := registeredStore.Load(name); ok {
+		store, err := v.(StoreConstructor)(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create store: %w", err)
+		}
+		return store, nil
+	}
+	return nil, fmt.Errorf("store not found: %s", name)
 }

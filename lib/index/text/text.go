@@ -2,6 +2,10 @@ package text
 
 import (
 	"context"
+	"fmt"
+	"sync"
+
+	"github.com/snowmerak/indexer/pkg/config"
 )
 
 type Payload struct {
@@ -30,4 +34,23 @@ type Text interface {
 	Delete(ctx context.Context, id int) error
 	Drop(ctx context.Context) error
 	UpdateSynonyms(ctx context.Context, synonyms map[string][]string) error
+}
+
+var registeredText = sync.Map{}
+
+type TextConstructor func(*config.ClientConfig) (Text, error)
+
+func RegisterText(name string, text TextConstructor) {
+	registeredText.Store(name, text)
+}
+
+func GetText(name string, config *config.ClientConfig) (Text, error) {
+	if v, ok := registeredText.Load(name); ok {
+		text, err := v.(TextConstructor)(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create text client: %w", err)
+		}
+		return text, nil
+	}
+	return nil, fmt.Errorf("text client not found: %s", name)
 }

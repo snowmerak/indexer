@@ -1,6 +1,12 @@
 package vector
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"sync"
+
+	"github.com/snowmerak/indexer/pkg/config"
+)
 
 const (
 	PayloadId        = "id"
@@ -21,4 +27,23 @@ type Vector interface {
 	Search(ctx context.Context, vector []float64, limit int) ([]*Payload, error)
 	Delete(ctx context.Context, id int) error
 	Drop(ctx context.Context) error
+}
+
+var registeredVector = sync.Map{}
+
+type VectorConstructor func(*config.ClientConfig) (Vector, error)
+
+func RegisterVector(name string, vector VectorConstructor) {
+	registeredVector.Store(name, vector)
+}
+
+func GetVector(name string, config *config.ClientConfig) (Vector, error) {
+	if v, ok := registeredVector.Load(name); ok {
+		vector, err := v.(VectorConstructor)(config)
+		if err != nil {
+			return nil, fmt.Errorf("failed to create vector client: %w", err)
+		}
+		return vector, nil
+	}
+	return nil, fmt.Errorf("vector client not found: %s", name)
 }
