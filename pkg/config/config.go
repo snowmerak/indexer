@@ -24,6 +24,7 @@ type ClientConfig struct {
 }
 
 type Config struct {
+	SearchCount       int    `yaml:"search_count,omitempty"`
 	MaxConcurrentJobs int    `yaml:"max_concurrent_jobs,omitempty"`
 	Analyzer          string `yaml:"analyzer,omitempty"`
 	Embeddings        struct {
@@ -50,6 +51,7 @@ type Config struct {
 func Default() *Config {
 	return &Config{
 		MaxConcurrentJobs: 36,
+		SearchCount:       10,
 		Analyzer:          "golang",
 		Embeddings: struct {
 			Code        ClientConfig `yaml:"code,omitempty"`

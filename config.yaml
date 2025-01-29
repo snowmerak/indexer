@@ -1,4 +1,5 @@
 max_concurrent_jobs: 36
+search_count: 10
 analyzer: golang
 embeddings:
     code:
