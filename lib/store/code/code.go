@@ -1,6 +1,12 @@
 package code
 
-import "context"
+import (
+	"context"
+	"fmt"
+	"strings"
+
+	"github.com/nao1215/markdown"
+)
 
 type Data struct {
 	Id          int
@@ -8,6 +14,21 @@ type Data struct {
 	FilePath    string
 	Line        int
 	Description string
+}
+
+func (d *Data) ToMarkdown(language string) string {
+	builder := strings.Builder{}
+	md := markdown.NewMarkdown(&builder).
+		H2(fmt.Sprintf("Snippet %d", d.Id)).
+		H3("Code Block").
+		CodeBlocks(markdown.SyntaxHighlight(language), d.CodeBlock).
+		H3("File Path").
+		BulletList(fmt.Sprintf("File Path: %s", d.FilePath), fmt.Sprintf("Line: %d", d.Line)).
+		H3("Description").
+		PlainText(d.Description)
+	_ = md.Build()
+
+	return builder.String()
 }
 
 type Store interface {
