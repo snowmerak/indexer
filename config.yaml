@@ -1,0 +1,47 @@
+max_concurrent_jobs: 36
+analyzer: golang
+embeddings:
+    code:
+        type: pyembeddings
+        host:
+            - http://localhost:8392
+    description:
+        type: ollama
+        host:
+            - http://localhost:11434
+        model: bge-m3
+        dimension: 1024
+generation:
+    chat:
+        type: ollama
+        host:
+            - http://localhost:11434
+        model: qwen2.5-coder:1.5b
+store:
+    code:
+        type: postgres
+        host:
+            - localhost:5432
+        database: postgres
+        user: postgres
+        password: postgres
+        project: indexer
+index:
+    vector:
+        code:
+            type: qdrant
+            host:
+                - localhost:6334
+            project: indexer-code
+        description:
+            type: qdrant
+            host:
+                - localhost:6334
+            project: indexer-desc
+    description:
+        index:
+            type: meilisearch
+            host:
+                - http://localhost:7700
+            api_key: tFWSre9Ix9Ltq7nXV87c9O5UP
+            project: indxer
