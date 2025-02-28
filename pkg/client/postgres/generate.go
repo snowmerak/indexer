@@ -1,3 +1,3 @@
 package postgres
 
-//go:generate sqlc generate
+//go:generate go tool sqlc generate
